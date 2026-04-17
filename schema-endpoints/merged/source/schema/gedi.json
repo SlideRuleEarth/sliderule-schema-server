@@ -1,0 +1,185 @@
+{
+  "domain": "gedi",
+  "version": "v5.3.0",
+  "inherits": "core",
+  "groups": {
+    "beam_selection": {
+      "label": "Beam Selection",
+      "description": "Controls which GEDI beams are processed.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": {
+        "beams": {
+          "default": [
+            "beam0",
+            "beam1",
+            "beam2",
+            "beam3",
+            "beam5",
+            "beam6",
+            "beam8",
+            "beam11"
+          ],
+          "type": "array<string>",
+          "description": "Which GEDI beams to process. GEDI has 8 beams (not contiguously numbered).",
+          "valid_values": [
+            "beam0",
+            "beam1",
+            "beam2",
+            "beam3",
+            "beam5",
+            "beam6",
+            "beam8",
+            "beam11"
+          ]
+        },
+        "beam": {
+          "default": [
+            "beam0",
+            "beam1",
+            "beam2",
+            "beam3",
+            "beam5",
+            "beam6",
+            "beam8",
+            "beam11"
+          ],
+          "type": "array<string>",
+          "description": "Alias for beams. Both 'beam' and 'beams' are accepted with identical behavior.",
+          "valid_values": [
+            "beam0",
+            "beam1",
+            "beam2",
+            "beam3",
+            "beam5",
+            "beam6",
+            "beam8",
+            "beam11"
+          ]
+        }
+      }
+    },
+    "quality_filtering": {
+      "label": "Quality & Degradation Filters",
+      "description": "Controls for GEDI data quality and instrument degradation filtering. Each filter has a flag (threshold) and a boolean to enable filtering.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": {
+        "l4_quality_flag": {
+          "default": 0,
+          "type": "integer",
+          "description": "L4A quality flag threshold. Footprints with quality below this value are candidates for exclusion."
+        },
+        "l4_quality_filter": {
+          "default": false,
+          "type": "boolean",
+          "description": "Enable filtering by l4_quality_flag. When true, footprints below the threshold are excluded.",
+          "interacts_with": [
+            "l4_quality_flag"
+          ],
+          "note": "Quality filters can be aggressive \u2014 enabling all filters may remove 50%+ of footprints."
+        },
+        "l2_quality_flag": {
+          "default": 0,
+          "type": "integer",
+          "description": "L2-level waveform processing quality flag threshold."
+        },
+        "l2_quality_filter": {
+          "default": false,
+          "type": "boolean",
+          "description": "Enable filtering by l2_quality_flag.",
+          "interacts_with": [
+            "l2_quality_flag"
+          ]
+        },
+        "degrade_flag": {
+          "default": 0,
+          "type": "integer",
+          "description": "Instrument degradation flag threshold. GEDI laser power has degraded over the mission."
+        },
+        "degrade_filter": {
+          "default": false,
+          "type": "boolean",
+          "description": "Enable filtering by degrade_flag. Excludes footprints from degraded instrument periods.",
+          "interacts_with": [
+            "degrade_flag"
+          ]
+        },
+        "surface_flag": {
+          "default": 0,
+          "type": "integer",
+          "description": "Surface condition flag threshold."
+        },
+        "surface_filter": {
+          "default": false,
+          "type": "boolean",
+          "description": "Enable filtering by surface_flag. Restricts to footprints with valid surface conditions.",
+          "interacts_with": [
+            "surface_flag"
+          ]
+        }
+      }
+    },
+    "granule_selection": {
+      "label": "Granule Filtering",
+      "description": "Constrain which GEDI granules are processed.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": {
+        "granule": {
+          "type": "object",
+          "description": "Filter granules by orbital parameters. All fields default to -1 (no filter).",
+          "fields": {
+            "track": {
+              "default": -1,
+              "type": "integer",
+              "description": "Track number."
+            },
+            "version": {
+              "default": -1,
+              "type": "integer",
+              "description": "Data version. -1 uses latest."
+            },
+            "year": {
+              "default": -1,
+              "type": "integer",
+              "description": "Year filter."
+            },
+            "orbit": {
+              "default": -1,
+              "type": "integer",
+              "description": "Orbit number."
+            },
+            "doy": {
+              "default": -1,
+              "type": "integer",
+              "description": "Day of year."
+            },
+            "region": {
+              "default": -1,
+              "type": "integer",
+              "description": "Region number."
+            }
+          }
+        }
+      }
+    },
+    "field_selectors": {
+      "label": "Ancillary Field Selection",
+      "description": "Request additional columns from the source GEDI granules.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": {
+        "anc_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Additional ancillary fields to include from the GEDI granules."
+        }
+      }
+    }
+  }
+}

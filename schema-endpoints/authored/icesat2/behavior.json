@@ -1,0 +1,67 @@
+{
+  "domain": "icesat2",
+  "version": "v5.3.0",
+  "parameters": {
+    "cnf": {
+      "depends_on": [
+        "srt"
+      ],
+      "interaction_detail": "Confidence classification is surface-type-dependent. The same photon receives different confidence scores depending on which surface type (srt) is applied. Changing srt changes which photons survive the cnf filter.",
+      "required_pairings": {
+        "with_atl08_class": "Set cnf=0 (no native filtering) to let all ATL08-classified photons through",
+        "with_atl24": "Set cnf=-1 (all photons) to let all ATL24-classified photons through"
+      }
+    },
+    "srt": {
+      "depends_on": [
+        "cnf"
+      ],
+      "interaction_detail": "Forcing srt overrides the per-photon surface mask globally. Use when the automatic mask misclassifies the surface (e.g., small lakes classified as land, ice shelf margins).",
+      "required_pairings": {
+        "with_atl08_class": "Set srt=0 (land) to allow all ATL08 photon classifications",
+        "with_atl24": "Set srt=-1 (dynamic) to allow all ATL24 photon classifications"
+      }
+    },
+    "atl08_class": {
+      "required_pairings": {
+        "cnf": "Set to 0 (no native filtering)",
+        "srt": "Set to 0 (land)"
+      },
+      "implicit_behavior": "When atl08_class is set and an ATL08 ancillary field is requested, ATL08 classifications are automatically enabled with unclassified photons filtered out. If PhoREAL is also enabled, noise photons are auto-filtered. Manual specification of atl08_class takes precedence."
+    },
+    "res": {
+      "interacts_with": [
+        "len"
+      ],
+      "interaction_detail": "res < len = overlapping extents (correlated). res = len = adjacent (independent samples). res > len = gaps. Default 20/40 gives 2:1 overlap."
+    },
+    "len": {
+      "interacts_with": [
+        "res",
+        "cnt"
+      ],
+      "interaction_detail": "Longer extents average more photons (smoother, less noise) but lose fine-scale surface features. Must have at least cnt photons within len to produce a valid extent."
+    },
+    "cnt": {
+      "interacts_with": [
+        "len"
+      ]
+    },
+    "fit": {
+      "implicit_behavior": "An empty object {} is sufficient to enable surface fitting. No fields are required."
+    },
+    "phoreal": {
+      "implicit_behavior": "Enabling PhoREAL uses ATL08 land surface classifications. Noise photons are automatically filtered out when PhoREAL is active."
+    },
+    "atl24": {
+      "required_pairings": {
+        "cnf": "Set to -1 (all photons) \u2014 bathymetric returns are inherently low-confidence",
+        "srt": "Set to -1 (dynamic)"
+      }
+    },
+    "atl08_fields": {
+      "implicit_behavior": "Adding an atl08_field automatically enables ATL08 classification with unclassified photons filtered out. If PhoREAL is also active, noise photons are auto-filtered. Manual atl08_class specification takes precedence.",
+      "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead."
+    }
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "domain": "core",
+  "version": "v5.3.0",
+  "inherits": null,
+  "params": {
+    "poly": {
+      "default": [],
+      "type": "array<object>",
+      "description": "Polygon defining the area of interest. Counter-clockwise array of {lon, lat} objects forming a closed ring (first point must equal last point).",
+      "entry_schema": {
+        "lon": "number",
+        "lat": "number"
+      }
+    },
+    "region_mask": {
+      "type": "object",
+      "description": "Rasterized region for complex polygons with holes or non-convex boundaries. More performant than polygon for point-in-region tests on complex shapes. The poly parameter is still required for granule discovery \u2014 region_mask only refines which points within discovered granules are returned.",
+      "fields": {
+        "latmin": {
+          "default": 0,
+          "type": "number"
+        },
+        "latmax": {
+          "default": 0,
+          "type": "number"
+        },
+        "lonmin": {
+          "default": 0,
+          "type": "number"
+        },
+        "lonmax": {
+          "default": 0,
+          "type": "number"
+        },
+        "cellsize": {
+          "default": 0,
+          "type": "number",
+          "description": "Grid cell size in degrees."
+        },
+        "rows": {
+          "default": 0,
+          "type": "integer"
+        },
+        "cols": {
+          "default": 0,
+          "type": "integer"
+        },
+        "geojson": {
+          "default": "",
+          "type": "string",
+          "description": "GeoJSON string defining the region of interest."
+        }
+      }
+    },
+    "proj": {
+      "default": "auto",
+      "type": "string",
+      "description": "Projection. Auto selects based on latitude (polar stereographic for high latitudes, appropriate projection for mid-latitudes)."
+    },
+    "datum": {
+      "default": "unspecified",
+      "type": "string",
+      "description": "Vertical datum. When unspecified, heights are WGS84 ellipsoidal."
+    },
+    "timeout": {
+      "default": 600,
+      "type": "integer",
+      "unit": "seconds",
+      "description": "Overall request timeout."
+    },
+    "rqst_timeout": {
+      "default": 600,
+      "type": "integer",
+      "unit": "seconds",
+      "description": "Request-level timeout."
+    },
+    "node_timeout": {
+      "default": 600,
+      "type": "integer",
+      "unit": "seconds",
+      "description": "Per-node processing timeout."
+    },
+    "read_timeout": {
+      "default": 600,
+      "type": "integer",
+      "unit": "seconds",
+      "description": "Data read timeout."
+    },
+    "max_resources": {
+      "default": 300,
+      "type": "integer",
+      "description": "Maximum number of HDF5 granules the server will process for a single request. Narrow the polygon or time window to stay under this limit, or increase it for comprehensive coverage."
+    },
+    "resources": {
+      "default": [],
+      "type": "array<string>",
+      "description": "Explicit list of granule filenames to process. Bypasses CMR spatial/temporal discovery."
+    },
+    "resource": {
+      "default": "",
+      "type": "string",
+      "description": "Single granule filename to process."
+    },
+    "points_in_polygon": {
+      "default": 0,
+      "type": "integer",
+      "description": "Limit the number of points returned within the polygon. 0 means no limit. Useful for quick data previews."
+    },
+    "cluster_size_hint": {
+      "default": 0,
+      "type": "integer",
+      "description": "Hint to the server about expected workload size for cluster scaling. 0 means automatic."
+    },
+    "key_space": {
+      "default": -1,
+      "type": "integer",
+      "description": "Internal key space for parallel processing. -1 means auto-assigned. Only override for client-side request parallelization."
+    },
+    "output": {
+      "type": "object",
+      "description": "Output format configuration. For direct HTTP API usage, always include format, as_geo, and with_checksum.",
+      "fields": {
+        "format": {
+          "default": "geoparquet",
+          "type": "string",
+          "description": "Output format.",
+          "valid_values": [
+            "parquet",
+            "geoparquet"
+          ]
+        },
+        "as_geo": {
+          "default": false,
+          "type": "boolean",
+          "description": "Include geometry column for GeoParquet."
+        },
+        "with_checksum": {
+          "default": false,
+          "type": "boolean",
+          "description": "Include data integrity checksum."
+        },
+        "fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Restrict output to specific columns."
+        },
+        "ancillary": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Additional ancillary datasets to include."
+        },
+        "path": {
+          "default": "",
+          "type": "string",
+          "description": "Output file path (used by Python client)."
+        },
+        "open_on_complete": {
+          "default": false,
+          "type": "boolean",
+          "description": "Auto-open result (used by Python client)."
+        },
+        "with_validation": {
+          "default": false,
+          "type": "boolean",
+          "description": "Enable server-side validation."
+        },
+        "asset": {
+          "default": "",
+          "type": "string",
+          "description": "Output asset target for server-side storage."
+        },
+        "endpoint": {
+          "default": "",
+          "type": "string",
+          "description": "Output endpoint for server-side delivery."
+        },
+        "credentials": {
+          "type": "object",
+          "description": "AWS credentials for server-side output to S3. Not needed for direct HTTP API usage."
+        }
+      },
+      "note": "X-series APIs return time_ns (Unix nanoseconds) as the DataFrame index. Always call reset_index() after to_pandas() to preserve the time column."
+    },
+    "samples": {
+      "default": [],
+      "type": "dict<string, object> | array",
+      "description": "Dictionary of raster datasets to sample. Each key becomes the column name prefix in output. See icesat2 domain schema for full entry_schema and known_assets."
+    }
+  }
+}

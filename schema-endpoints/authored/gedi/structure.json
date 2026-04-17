@@ -1,0 +1,54 @@
+{
+  "domain": "gedi",
+  "version": "v5.3.0",
+  "groups": {
+    "beam_selection": {
+      "label": "Beam Selection",
+      "description": "Controls which GEDI beams are processed.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": [
+        "beams",
+        "beam"
+      ]
+    },
+    "quality_filtering": {
+      "label": "Quality & Degradation Filters",
+      "description": "Controls for GEDI data quality and instrument degradation filtering. Each filter has a flag (threshold) and a boolean to enable filtering.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": [
+        "l4_quality_flag",
+        "l4_quality_filter",
+        "l2_quality_flag",
+        "l2_quality_filter",
+        "degrade_flag",
+        "degrade_filter",
+        "surface_flag",
+        "surface_filter"
+      ]
+    },
+    "granule_selection": {
+      "label": "Granule Filtering",
+      "description": "Constrain which GEDI granules are processed.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": [
+        "granule"
+      ]
+    },
+    "field_selectors": {
+      "label": "Ancillary Field Selection",
+      "description": "Request additional columns from the source GEDI granules.",
+      "applies_to": [
+        "gedil4ax"
+      ],
+      "params": [
+        "anc_fields"
+      ]
+    }
+  }
+}

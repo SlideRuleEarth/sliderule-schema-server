@@ -1,0 +1,803 @@
+{
+  "domain": "icesat2",
+  "version": "v5.3.0",
+  "inherits": "core",
+  "groups": {
+    "photon_filtering": {
+      "label": "Photon Selection & Filtering",
+      "description": "Controls which photons are included in processing. All criteria are applied together (AND logic) \u2014 a photon must pass every specified filter to be included. Applied before any algorithm runs.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": {
+        "cnf": {
+          "default": [
+            "atl03_low",
+            "atl03_medium",
+            "atl03_high"
+          ],
+          "type": "array<string> | integer",
+          "description": "Photon signal confidence filter. Controls the minimum classification confidence for photons to be included. The default matches ICESat-2 project ATL06 settings.",
+          "valid_values": {
+            "named": [
+              "atl03_possible_tep",
+              "atl03_not_considered",
+              "atl03_background",
+              "atl03_within_10m",
+              "atl03_low",
+              "atl03_medium",
+              "atl03_high"
+            ],
+            "integer_shorthand": {
+              "-2": "TEP (transmitter echo path) photons only",
+              "-1": "all photons including noise and TEP",
+              "0": "background and above",
+              "1": "within 10m of surface and above",
+              "2": "low confidence and above",
+              "3": "medium confidence and above",
+              "4": "high confidence only"
+            }
+          },
+          "format_notes": "Integer as scalar means 'at least this level'. Integer as array means 'exactly these levels'. String array means 'exactly these named levels'.",
+          "depends_on": [
+            "srt"
+          ],
+          "interaction_detail": "Confidence classification is surface-type-dependent. The same photon receives different confidence scores depending on which surface type (srt) is applied. Changing srt changes which photons survive the cnf filter.",
+          "required_pairings": {
+            "with_atl08_class": "Set cnf=0 (no native filtering) to let all ATL08-classified photons through",
+            "with_atl24": "Set cnf=-1 (all photons) to let all ATL24-classified photons through"
+          }
+        },
+        "srt": {
+          "default": "dynamic",
+          "type": "string | integer",
+          "description": "Surface type used for photon classification and geophysical corrections. Dynamic mode uses the ATL03 per-photon surface mask. Forcing a surface type overrides the mask for all photons.",
+          "valid_values": {
+            "named": [
+              "dynamic"
+            ],
+            "integer": {
+              "-1": "dynamic (automatic, same as 'dynamic' string)",
+              "0": "land",
+              "1": "ocean",
+              "2": "sea ice",
+              "3": "land ice",
+              "4": "inland water"
+            }
+          },
+          "depends_on": [
+            "cnf"
+          ],
+          "interaction_detail": "Forcing srt overrides the per-photon surface mask globally. Use when the automatic mask misclassifies the surface (e.g., small lakes classified as land, ice shelf margins).",
+          "required_pairings": {
+            "with_atl08_class": "Set srt=0 (land) to allow all ATL08 photon classifications",
+            "with_atl24": "Set srt=-1 (dynamic) to allow all ATL24 photon classifications"
+          }
+        },
+        "quality_ph": {
+          "default": [
+            "atl03_quality_nominal"
+          ],
+          "type": "array<string>",
+          "description": "ATL03 photon quality classification filter. Identifies instrumental artifacts. Applied independently of cnf.",
+          "valid_values": [
+            "atl03_quality_nominal",
+            "atl03_quality_afterpulse",
+            "atl03_quality_impulse_response",
+            "atl03_quality_tep"
+          ]
+        },
+        "atl08_class": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Filter photons by ATL08 land/vegetation classification. Empty means no ATL08 filtering. Requires ATL08 data to exist for the same granules.",
+          "valid_values": [
+            "atl08_noise",
+            "atl08_ground",
+            "atl08_canopy",
+            "atl08_top_of_canopy",
+            "atl08_unclassified"
+          ],
+          "required_pairings": {
+            "cnf": "Set to 0 (no native filtering)",
+            "srt": "Set to 0 (land)"
+          },
+          "implicit_behavior": "When atl08_class is set and an ATL08 ancillary field is requested, ATL08 classifications are automatically enabled with unclassified photons filtered out. If PhoREAL is also enabled, noise photons are auto-filtered. Manual specification of atl08_class takes precedence."
+        },
+        "pass_invalid": {
+          "default": false,
+          "type": "boolean",
+          "description": "Include photons flagged as invalid by ATL03. Normally these are excluded before any processing."
+        }
+      }
+    },
+    "segment_control": {
+      "label": "Segment Geometry & Surface Fitting",
+      "description": "Controls how photons are grouped into extents (SlideRule's custom-length segments) and how surface fits are computed. SlideRule uses 'extent' to distinguish from ATL03's standard 20m segments.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x"
+      ],
+      "params": {
+        "res": {
+          "default": 20,
+          "type": "number",
+          "unit": "meters",
+          "description": "Along-track posting resolution. Distance between successive extent centers.",
+          "range": [
+            1,
+            10000
+          ],
+          "interacts_with": [
+            "len"
+          ],
+          "interaction_detail": "res < len = overlapping extents (correlated). res = len = adjacent (independent samples). res > len = gaps. Default 20/40 gives 2:1 overlap."
+        },
+        "len": {
+          "default": 40,
+          "type": "number",
+          "unit": "meters",
+          "description": "Along-track extent length. The window of photons used for each surface fit.",
+          "range": [
+            1,
+            10000
+          ],
+          "interacts_with": [
+            "res",
+            "cnt"
+          ],
+          "interaction_detail": "Longer extents average more photons (smoother, less noise) but lose fine-scale surface features. Must have at least cnt photons within len to produce a valid extent."
+        },
+        "ats": {
+          "default": 20,
+          "type": "number",
+          "unit": "meters",
+          "description": "Along-track spread tolerance. Maximum along-track distance a photon can be from the extent center to be included."
+        },
+        "cnt": {
+          "default": 10,
+          "type": "integer",
+          "description": "Minimum photon count per extent. Extents with fewer photons are discarded.",
+          "range": [
+            1,
+            10000
+          ],
+          "interacts_with": [
+            "len"
+          ]
+        },
+        "maxi": {
+          "default": 5,
+          "type": "integer",
+          "description": "Maximum iterations for the iterative surface-fitting algorithm.",
+          "range": [
+            1,
+            100
+          ]
+        },
+        "sigma_r_max": {
+          "default": 5,
+          "type": "number",
+          "unit": "meters",
+          "description": "Maximum robust dispersion. Extents with residual spread exceeding this value are rejected as poor fits."
+        },
+        "H_min_win": {
+          "default": 3,
+          "type": "number",
+          "unit": "meters",
+          "description": "Minimum height window for surface fitting. Sets the floor on the vertical search range for the fit algorithm."
+        },
+        "dist_in_seg": {
+          "default": false,
+          "type": "boolean",
+          "description": "Report along-track distance within each extent. Adds a distance column to output."
+        }
+      }
+    },
+    "beam_track_selection": {
+      "label": "Beam & Track Selection",
+      "description": "Controls which of the 6 ICESat-2 beams and which orbital tracks are processed.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": {
+        "beams": {
+          "default": [
+            "gt1l",
+            "gt1r",
+            "gt2l",
+            "gt2r",
+            "gt3l",
+            "gt3r"
+          ],
+          "type": "array<string>",
+          "description": "Which beams to process. Each pair (gt1l/gt1r etc.) consists of one strong and one weak beam, with assignment depending on spacecraft orientation.",
+          "valid_values": [
+            "gt1l",
+            "gt1r",
+            "gt2l",
+            "gt2r",
+            "gt3l",
+            "gt3r"
+          ]
+        },
+        "spots": {
+          "default": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "type": "array<integer>",
+          "description": "Spot numbers to process. Orientation-independent alternative to beam selection. Spots 1, 3, 5 are always strong beams regardless of spacecraft attitude.",
+          "valid_values": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "applies_to": [
+            "atl03x"
+          ],
+          "note": "Only supported by the atl03x endpoint. Other APIs use the beams parameter."
+        },
+        "track": {
+          "default": 0,
+          "type": "integer",
+          "description": "Track pair selection.",
+          "valid_values": {
+            "0": "all three pairs",
+            "1": "pair 1 (gt1l/gt1r)",
+            "2": "pair 2 (gt2l/gt2r)",
+            "3": "pair 3 (gt3l/gt3r)"
+          }
+        },
+        "podppd": {
+          "default": 1,
+          "type": "integer",
+          "description": "Precision orbit determination source.",
+          "valid_values": {
+            "0": "standard orbit solution",
+            "1": "precise orbit solution"
+          }
+        }
+      }
+    },
+    "granule_selection": {
+      "label": "Granule Filtering",
+      "description": "Constrain which HDF5 granules are processed beyond the spatial/temporal query.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": {
+        "granule": {
+          "type": "object",
+          "description": "Filter granules by orbital parameters or date. All fields default to -1 (no filter).",
+          "fields": {
+            "rgt": {
+              "default": -1,
+              "type": "integer",
+              "description": "Reference ground track number. ICESat-2 has 1387 unique RGTs."
+            },
+            "cycle": {
+              "default": -1,
+              "type": "integer",
+              "description": "91-day orbital repeat cycle number."
+            },
+            "region": {
+              "default": -1,
+              "type": "integer",
+              "description": "Granule region (1-14). Each ATL03 granule covers one of 14 geographic regions."
+            },
+            "version": {
+              "default": -1,
+              "type": "integer",
+              "description": "Data product version. -1 uses latest."
+            },
+            "year": {
+              "default": -1,
+              "type": "integer",
+              "description": "Year filter."
+            },
+            "month": {
+              "default": -1,
+              "type": "integer",
+              "description": "Month filter."
+            },
+            "day": {
+              "default": -1,
+              "type": "integer",
+              "description": "Day filter."
+            }
+          }
+        }
+      }
+    },
+    "algorithms": {
+      "label": "Processing Algorithms",
+      "description": "Optional algorithm blocks for atl03x. Each enables a different processing mode that either replaces or appends to the base photon DataFrame. Only include the algorithm(s) you need.",
+      "applies_to": [
+        "atl03x"
+      ],
+      "params": {
+        "fit": {
+          "type": "object",
+          "description": "ATL06-style iterative surface fitting. Replaces per-photon rows with per-extent fitted elevations. An empty dict {} enables fitting with default segment_control parameters. The fit block can also override maxi, sigma_r_max, and H_min_win independently of the top-level segment_control values.",
+          "fields": {
+            "maxi": {
+              "default": 5,
+              "type": "integer",
+              "description": "Override of top-level maxi for the fit algorithm specifically."
+            },
+            "sigma_r_max": {
+              "default": 5,
+              "type": "number",
+              "description": "Override of top-level sigma_r_max for the fit algorithm specifically."
+            },
+            "H_min_win": {
+              "default": 3,
+              "type": "number",
+              "description": "Override of top-level H_min_win for the fit algorithm specifically."
+            }
+          },
+          "output_effect": "replaces",
+          "implicit_behavior": "An empty object {} is sufficient to enable surface fitting. No fields are required."
+        },
+        "phoreal": {
+          "type": "object",
+          "description": "PhoREAL canopy height algorithm (developed at University of Texas at Austin). Computes vegetation metrics from photon distributions within custom-length extents. Replaces per-photon rows with per-extent vegetation statistics.",
+          "fields": {
+            "binsize": {
+              "default": 1,
+              "type": "number",
+              "unit": "meters",
+              "description": "Vertical bin size for the photon height histogram used to compute canopy metrics."
+            },
+            "geoloc": {
+              "default": "median",
+              "type": "string",
+              "description": "Method for computing the geolocation (lat, lon, along-track distance, time) of each extent.",
+              "valid_values": {
+                "mean": "Average across all photons in the extent",
+                "median": "Median value across all photons in the extent",
+                "center": "Halfway point calculated from the average of the first and last photon positions"
+              }
+            },
+            "use_abs_h": {
+              "default": false,
+              "type": "boolean",
+              "description": "Use absolute (ellipsoidal) photon heights instead of heights normalized relative to ground."
+            },
+            "above_classifier": {
+              "default": false,
+              "type": "boolean",
+              "description": "Enable the above-ground classifier for canopy/ground separation."
+            },
+            "send_waveform": {
+              "default": false,
+              "type": "boolean",
+              "description": "Include the binned photon height histogram (waveform) as an array column in the output."
+            },
+            "can_quality_filter": {
+              "default": 0,
+              "type": "integer",
+              "description": "Canopy quality flag filter threshold. Extents below this quality are excluded."
+            },
+            "te_quality_filter": {
+              "default": 0,
+              "type": "integer",
+              "description": "Terrain quality flag filter threshold. Extents below this quality are excluded."
+            }
+          },
+          "output_effect": "replaces",
+          "implicit_behavior": "Enabling PhoREAL uses ATL08 land surface classifications. Noise photons are automatically filtered out when PhoREAL is active."
+        },
+        "yapc": {
+          "type": "object",
+          "description": "Yet Another Photon Classifier. Adds a yapc_score column (0-255) to each photon based on local photon density analysis using k-nearest-neighbors.",
+          "fields": {
+            "score": {
+              "default": 0,
+              "type": "integer",
+              "range": [
+                0,
+                255
+              ],
+              "description": "Minimum score threshold. Photons with scores below this are excluded. 0 means add scores to all photons without filtering \u2014 use for exploratory analysis."
+            },
+            "version": {
+              "default": 0,
+              "type": "integer",
+              "description": "YAPC algorithm version. 0 reads the pre-computed classification from the ATL03 granule.",
+              "note": "Versions 1-3 are NOT supported by the atl03x endpoint."
+            },
+            "knn": {
+              "default": 0,
+              "type": "integer",
+              "description": "K nearest neighbors for density calculation. 0 = automatic selection."
+            },
+            "min_knn": {
+              "default": 5,
+              "type": "integer",
+              "description": "Minimum KNN value when knn is set to automatic."
+            },
+            "win_h": {
+              "default": 6,
+              "type": "number",
+              "unit": "meters",
+              "description": "Vertical window size for neighbor search."
+            },
+            "win_x": {
+              "default": 15,
+              "type": "number",
+              "unit": "meters",
+              "description": "Horizontal (along-track) window size for neighbor search."
+            }
+          },
+          "output_effect": "appends"
+        },
+        "atl24": {
+          "type": "object",
+          "description": "Bathymetry photon classification. Runs an ensemble of three classifiers (Median Filter, QTREES, Coastnet) on photon data to identify sea surface, bathymetry, and unclassified returns.",
+          "fields": {
+            "anc_fields": {
+              "default": [],
+              "type": "array<string>",
+              "description": "Ancillary fields to include from ATL24 bathymetry data."
+            },
+            "class_ph": {
+              "default": [
+                "bathymetry"
+              ],
+              "type": "array<string>",
+              "description": "Which classified photon types to return in the output.",
+              "valid_values": [
+                "unclassified",
+                "bathymetry",
+                "sea_surface"
+              ]
+            },
+            "confidence_threshold": {
+              "default": 0,
+              "type": "number",
+              "description": "Minimum classification confidence score. 0 returns all classified photons regardless of confidence."
+            },
+            "compact": {
+              "default": true,
+              "type": "boolean",
+              "description": "Use compact output format."
+            },
+            "night": {
+              "default": [
+                "off",
+                "on"
+              ],
+              "type": "array<string>",
+              "description": "Filter by day/night. Default includes both.",
+              "valid_values": {
+                "off": "daytime passes",
+                "on": "nighttime passes"
+              },
+              "note": "Night passes typically have less solar background noise, producing cleaner bathymetric classifications."
+            },
+            "low_confidence": {
+              "default": [
+                "off",
+                "on"
+              ],
+              "type": "array<string>",
+              "description": "Include or exclude low-confidence classifications.",
+              "valid_values": {
+                "off": "exclude low confidence",
+                "on": "include low confidence"
+              }
+            },
+            "sensor_depth_exceeded": {
+              "default": [
+                "off",
+                "on"
+              ],
+              "type": "array<string>",
+              "description": "Include photons where estimated depth exceeds the sensor's detection capability.",
+              "valid_values": {
+                "off": "exclude",
+                "on": "include"
+              }
+            },
+            "invalid_kd": {
+              "default": [
+                "off",
+                "on"
+              ],
+              "type": "array<string>",
+              "description": "Include photons with invalid diffuse attenuation coefficient (Kd) data.",
+              "valid_values": {
+                "off": "exclude",
+                "on": "include"
+              }
+            },
+            "invalid_wind_speed": {
+              "default": [
+                "off",
+                "on"
+              ],
+              "type": "array<string>",
+              "description": "Include photons with invalid wind speed data.",
+              "valid_values": {
+                "off": "exclude",
+                "on": "include"
+              }
+            }
+          },
+          "output_effect": "replaces",
+          "required_pairings": {
+            "cnf": "Set to -1 (all photons) \u2014 bathymetric returns are inherently low-confidence",
+            "srt": "Set to -1 (dynamic)"
+          }
+        },
+        "atl13": {
+          "type": "object",
+          "description": "Inland water body configuration for the atl13x API. Identifies the target water body by name, reference ID, or coordinate.",
+          "fields": {
+            "name": {
+              "default": "",
+              "type": "string",
+              "description": "Water body name for filtered lookup."
+            },
+            "refid": {
+              "default": 0,
+              "type": "integer",
+              "description": "Reference water body ID. More reliable than name matching."
+            },
+            "coord": {
+              "default": {
+                "lon": 0,
+                "lat": 0
+              },
+              "type": "object",
+              "description": "A coordinate within the target water body for geographic lookup."
+            },
+            "anc_fields": {
+              "default": [],
+              "type": "array<string>",
+              "description": "Ancillary fields to include from ATL13 water body data."
+            }
+          },
+          "output_effect": "replaces"
+        }
+      }
+    },
+    "field_selectors": {
+      "label": "Ancillary Field Selection",
+      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x"
+      ],
+      "params": {
+        "atl03_ph_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Per-photon fields from the ATL03 /heights subgroup.",
+          "example_values": [
+            "ph_id_channel"
+          ]
+        },
+        "atl03_geo_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Geolocation fields from the ATL03 /geolocation subgroup.",
+          "example_values": [
+            "ref_azimuth",
+            "ref_elev"
+          ]
+        },
+        "atl03_corr_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Geophysical correction fields from the ATL03 /geophys_corr subgroup."
+        },
+        "atl03_bckgrd_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Background photon rate fields from the ATL03 /bckgrd_atlas subgroup."
+        },
+        "atl06_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Additional fields from ATL06 land-ice height segments."
+        },
+        "atl08_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Additional fields from ATL08 land-vegetation segments.",
+          "implicit_behavior": "Adding an atl08_field automatically enables ATL08 classification with unclassified photons filtered out. If PhoREAL is also active, noise photons are auto-filtered. Manual atl08_class specification takes precedence.",
+          "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead."
+        },
+        "atl09_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Atmospheric fields from ATL09 (cloud cover, atmospheric backscatter)."
+        },
+        "atl13_fields": {
+          "default": [],
+          "type": "array<string>",
+          "description": "Additional fields from ATL13 inland water surface segments."
+        }
+      }
+    },
+    "raster_sampling": {
+      "label": "Raster Co-Sampling",
+      "description": "Sample external raster datasets (DEMs, land cover, spectral indices) at each output point's geolocation. Results are added as extra columns with user-specified key as prefix.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": {
+        "samples": {
+          "default": {},
+          "type": "dict<string, object>",
+          "description": "Dictionary of raster datasets to sample. Each key becomes the column name prefix in the output (e.g., 'mosaic' produces 'mosaic.value', 'mosaic.time_ns', 'mosaic.file_id').",
+          "entry_schema": {
+            "asset": {
+              "type": "string",
+              "required": true,
+              "description": "Asset name from SlideRule's asset directory."
+            },
+            "algorithm": {
+              "type": "string",
+              "default": "NearestNeighbour",
+              "description": "GDAL resampling algorithm.",
+              "valid_values": [
+                "NearestNeighbour",
+                "Bilinear",
+                "Cubic",
+                "CubicSpline",
+                "Lanczos",
+                "Average",
+                "Mode",
+                "Gauss"
+              ]
+            },
+            "radius": {
+              "type": "number",
+              "unit": "meters",
+              "default": 0,
+              "description": "Sampling kernel radius. Also defines the region for zonal statistics."
+            },
+            "zonal_stats": {
+              "type": "boolean",
+              "default": false,
+              "description": "Compute and return zonal statistics (count, min, max, mean, median, stdev, MAD) for the sampling region."
+            },
+            "with_flags": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include 32-bit auxiliary pixel flags from the raster."
+            },
+            "bands": {
+              "type": "array<string>",
+              "default": [],
+              "description": "Specific bands to read. Some assets support derived bands."
+            },
+            "t0": {
+              "type": "string",
+              "format": "%Y-%m-%dT%H:%M:%SZ",
+              "description": "Start time filter for temporal raster datasets."
+            },
+            "t1": {
+              "type": "string",
+              "format": "%Y-%m-%dT%H:%M:%SZ",
+              "description": "Stop time filter for temporal raster datasets."
+            },
+            "use_poi_time": {
+              "type": "boolean",
+              "default": false,
+              "description": "Use the point-of-interest timestamp for closest-time raster matching instead of explicit t0/t1."
+            },
+            "catalog": {
+              "type": "object",
+              "description": "GeoJSON STAC catalog for datasets requiring external catalog lookup (e.g., usgs3dep-1meter-dem)."
+            }
+          },
+          "known_assets": {
+            "arcticdem-mosaic": {
+              "description": "ArcticDEM composite mosaic",
+              "temporal": false
+            },
+            "arcticdem-strips": {
+              "description": "ArcticDEM individual time-stamped strips",
+              "temporal": true
+            },
+            "esa-worldcover-10meter": {
+              "description": "ESA WorldCover 10m land classification",
+              "temporal": false
+            },
+            "cop-dem": {
+              "description": "Copernicus DEM",
+              "temporal": false
+            },
+            "landsat-hls": {
+              "description": "Harmonized Landsat Sentinel",
+              "temporal": true,
+              "derived_bands": [
+                "NDVI",
+                "NDWI",
+                "NDSI"
+              ]
+            },
+            "gedil3-canopy": {
+              "description": "GEDI L3 canopy height raster",
+              "temporal": false
+            },
+            "gedil4b": {
+              "description": "GEDI L4B biodensity raster",
+              "temporal": false
+            },
+            "usgs3dep-1meter-dem": {
+              "description": "USGS 3DEP 1-meter DEM",
+              "temporal": false,
+              "requires_catalog": true
+            }
+          },
+          "output_columns": {
+            "standard": [
+              "{key}.value",
+              "{key}.time_ns",
+              "{key}.file_id"
+            ],
+            "zonal_stats": [
+              "{key}.count",
+              "{key}.min",
+              "{key}.max",
+              "{key}.mean",
+              "{key}.median",
+              "{key}.stdev",
+              "{key}.mad"
+            ],
+            "note": "For multi-valued rasters (multiple strips or bands), column values are arrays. A file_directory in the DataFrame metadata maps file_id to raster filenames."
+          }
+        }
+      }
+    },
+    "data_source": {
+      "label": "Data Source",
+      "description": "Identifies the source dataset.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": {
+        "asset": {
+          "default": "icesat2",
+          "type": "string",
+          "description": "Source data asset identifier. Default 'icesat2' uses the standard ICESat-2 data holdings."
+        }
+      }
+    }
+  }
+}

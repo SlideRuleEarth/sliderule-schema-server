@@ -1,0 +1,24 @@
+locals {
+  terraform-git-repo = "sliderule-schema-server"
+}
+
+provider "aws" {
+  region = "us-east-1"
+  default_tags {
+    tags = {
+      Owner   = "SlideRule"
+      Project = "schema-server-${var.domain_root}"
+      terraform-base-path = replace(path.cwd,
+      "/^.*?(${local.terraform-git-repo}\\/)/", "$1")
+      cost-grouping = "${var.cost_grouping}"
+    }
+  }
+}
+
+module "cloudfront" {
+  source         = "./modules/"
+  domain_root    = var.domain_root
+  domainName     = var.domainName
+  domainApex     = var.domainApex
+  s3_bucket_name = var.s3_bucket_name
+}

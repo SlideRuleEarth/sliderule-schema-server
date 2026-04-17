@@ -1,0 +1,135 @@
+{
+  "domain": "icesat2",
+  "version": "v5.3.0",
+  "groups": {
+    "photon_filtering": {
+      "label": "Photon Selection & Filtering",
+      "description": "Controls which photons are included in processing. All criteria are applied together (AND logic) \u2014 a photon must pass every specified filter to be included. Applied before any algorithm runs.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": [
+        "cnf",
+        "srt",
+        "quality_ph",
+        "atl08_class",
+        "pass_invalid"
+      ]
+    },
+    "segment_control": {
+      "label": "Segment Geometry & Surface Fitting",
+      "description": "Controls how photons are grouped into extents (SlideRule's custom-length segments) and how surface fits are computed. SlideRule uses 'extent' to distinguish from ATL03's standard 20m segments.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x"
+      ],
+      "params": [
+        "res",
+        "len",
+        "ats",
+        "cnt",
+        "maxi",
+        "sigma_r_max",
+        "H_min_win",
+        "dist_in_seg"
+      ]
+    },
+    "beam_track_selection": {
+      "label": "Beam & Track Selection",
+      "description": "Controls which of the 6 ICESat-2 beams and which orbital tracks are processed.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": [
+        "beams",
+        "spots",
+        "track",
+        "podppd"
+      ]
+    },
+    "granule_selection": {
+      "label": "Granule Filtering",
+      "description": "Constrain which HDF5 granules are processed beyond the spatial/temporal query.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": [
+        "granule"
+      ]
+    },
+    "algorithms": {
+      "label": "Processing Algorithms",
+      "description": "Optional algorithm blocks for atl03x. Each enables a different processing mode that either replaces or appends to the base photon DataFrame. Only include the algorithm(s) you need.",
+      "applies_to": [
+        "atl03x"
+      ],
+      "params": [
+        "fit",
+        "phoreal",
+        "yapc",
+        "atl24",
+        "atl13"
+      ]
+    },
+    "field_selectors": {
+      "label": "Ancillary Field Selection",
+      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x"
+      ],
+      "params": [
+        "atl03_ph_fields",
+        "atl03_geo_fields",
+        "atl03_corr_fields",
+        "atl03_bckgrd_fields",
+        "atl06_fields",
+        "atl08_fields",
+        "atl09_fields",
+        "atl13_fields"
+      ]
+    },
+    "raster_sampling": {
+      "label": "Raster Co-Sampling",
+      "description": "Sample external raster datasets (DEMs, land cover, spectral indices) at each output point's geolocation. Results are added as extra columns with user-specified key as prefix.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": [
+        "samples"
+      ]
+    },
+    "data_source": {
+      "label": "Data Source",
+      "description": "Identifies the source dataset.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
+      ],
+      "params": [
+        "asset"
+      ]
+    }
+  }
+}

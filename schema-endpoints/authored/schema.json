@@ -1,0 +1,62 @@
+{
+  "version": "v5.3.0",
+  "domains": {
+    "core": {
+      "description": "Shared parameters inherited by all mission-specific domains.",
+      "param_count": 19,
+      "schema_url": "/source/schema/core.json"
+    },
+    "icesat2": {
+      "description": "ICESat-2 photon-counting laser altimetry parameters.",
+      "inherits": "core",
+      "param_count": 51,
+      "schema_url": "/source/schema/icesat2.json",
+      "fields_url": "/source/schema/icesat2/fields.json"
+    },
+    "gedi": {
+      "description": "GEDI full-waveform lidar parameters.",
+      "inherits": "core",
+      "param_count": 31,
+      "schema_url": "/source/schema/gedi.json"
+    }
+  },
+  "apis": {
+    "atl03x": {
+      "domain": "icesat2",
+      "endpoint": "/arrow/atl03x",
+      "description": "Photon-level data with optional pluggable algorithms (fit, phoreal, yapc, atl24, surface). The most flexible ICESat-2 API.",
+      "algorithms": ["fit", "phoreal", "yapc", "atl24", "surface"],
+      "output_schema_url": "/source/schema/icesat2/output/atl03x.json"
+    },
+    "atl06x": {
+      "domain": "icesat2",
+      "endpoint": "/arrow/atl06x",
+      "description": "Land ice surface elevation segments. Runs the ATL06 algorithm with stricter quality requirements.",
+      "output_schema_url": "/source/schema/icesat2/output/atl06x.json"
+    },
+    "atl08x": {
+      "domain": "icesat2",
+      "endpoint": "/arrow/atl08x",
+      "description": "Land and vegetation height segments. Terrain and canopy metrics.",
+      "output_schema_url": "/source/schema/icesat2/output/atl08x.json"
+    },
+    "atl13x": {
+      "domain": "icesat2",
+      "endpoint": "/arrow/atl13x",
+      "description": "Inland water surface height. Requires water body identification via name, refid, or coordinate.",
+      "output_schema_url": "/source/schema/icesat2/output/atl13x.json"
+    },
+    "atl24x": {
+      "domain": "icesat2",
+      "endpoint": "/arrow/atl24x",
+      "description": "Coastal bathymetry classified photons. Runs ensemble of Median Filter, QTREES, and Coastnet classifiers.",
+      "output_schema_url": "/source/schema/icesat2/output/atl24x.json"
+    },
+    "gedil4ax": {
+      "domain": "gedi",
+      "endpoint": "/arrow/gedil4ax",
+      "description": "GEDI L4A footprint-level aboveground biomass density (AGBD).",
+      "output_schema_url": "/source/schema/gedi/output/gedil4ax.json"
+    }
+  }
+}

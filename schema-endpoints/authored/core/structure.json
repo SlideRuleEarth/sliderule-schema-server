@@ -1,0 +1,106 @@
+{
+  "domain": "core",
+  "version": "v5.3.0",
+  "groups": {
+    "region": {
+      "label": "Region Definition",
+      "description": "Spatial and temporal parameters for the query. Every processing request requires at minimum a polygon or resource list.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "poly",
+        "region_mask"
+      ]
+    },
+    "projection": {
+      "label": "Projection & Datum",
+      "description": "Coordinate reference system parameters.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "proj",
+        "datum"
+      ]
+    },
+    "timeouts": {
+      "label": "Timeout Controls",
+      "description": "Server-side timeout parameters. Increase for large requests spanning many granules.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "timeout",
+        "rqst_timeout",
+        "node_timeout",
+        "read_timeout"
+      ]
+    },
+    "resources": {
+      "label": "Resource Controls",
+      "description": "Controls for granule discovery and processing limits.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "max_resources",
+        "resources",
+        "resource",
+        "points_in_polygon",
+        "cluster_size_hint",
+        "key_space"
+      ]
+    },
+    "output_config": {
+      "label": "Output Configuration",
+      "description": "Controls the format and content of the response.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "output"
+      ]
+    },
+    "raster_sampling": {
+      "label": "Raster Co-Sampling",
+      "description": "Sample external raster datasets at each output point. This is a core parameter available to all processing APIs.",
+      "applies_to": [
+        "atl03x",
+        "atl06x",
+        "atl08x",
+        "atl13x",
+        "atl24x",
+        "gedil4ax"
+      ],
+      "params": [
+        "samples"
+      ]
+    }
+  }
+}

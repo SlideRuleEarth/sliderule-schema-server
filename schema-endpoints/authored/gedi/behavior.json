@@ -1,0 +1,27 @@
+{
+  "domain": "gedi",
+  "version": "v5.3.0",
+  "parameters": {
+    "l4_quality_filter": {
+      "interacts_with": [
+        "l4_quality_flag"
+      ],
+      "note": "Quality filters can be aggressive \u2014 enabling all filters may remove 50%+ of footprints."
+    },
+    "l2_quality_filter": {
+      "interacts_with": [
+        "l2_quality_flag"
+      ]
+    },
+    "degrade_filter": {
+      "interacts_with": [
+        "degrade_flag"
+      ]
+    },
+    "surface_filter": {
+      "interacts_with": [
+        "surface_flag"
+      ]
+    }
+  }
+}
