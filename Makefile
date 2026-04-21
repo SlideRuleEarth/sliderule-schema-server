@@ -99,12 +99,16 @@ terraform-apply: ## Create/update the bucket + distribution + DNS via Terraform
 
 terraform-destroy: ## Tear down the bucket + distribution + DNS via Terraform
 	cd terraform/ && terraform init && \
-	(terraform workspace select $(DOMAIN)-schema-server || terraform workspace new $(DOMAIN)-schema-server) && \
+	terraform workspace select $(DOMAIN)-schema-server && \
 	terraform destroy \
 		-var domainName=$(DOMAIN) \
 		-var domainApex=$(DOMAIN_APEX) \
 		-var domain_root=$(DOMAIN_ROOT) \
 		-var s3_bucket_name=$(S3_BUCKET)
+# destroy does NOT fall through to `terraform workspace new` — a typoed
+# DOMAIN would otherwise create an empty workspace, run destroy against
+# zero resources, and print success. `workspace select` on a missing
+# name exits non-zero with a clear error, which is what we want.
 
 # ---- Smoke tests ----------------------------------------------------------------------------------
 
