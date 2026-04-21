@@ -211,30 +211,47 @@ def validate_index_param_counts(root: Path) -> None:
 
 def _resolve_url_to_source(url: str, root: Path) -> Path | None:
     """Map a published URL back to the repo file whose existence means
-    this merge will actually produce that URL. Returns None for URL
-    shapes the staging pipeline doesn't recognize.
+    this merge will actually produce that URL.
 
-    Mapping (must stay in sync with merge_domain + AUTHORED_COPIES + GENERATED_COPIES):
-      /source/schema.json                             ← authored/schema.json
-      /source/schema/<domain>.json                    ← generated/<domain>/params.json  (input to merge_domain)
-      /source/schema/<domain>/fields.json             ← authored/<domain>/fields.json
-      /source/schema/<domain>/fields/<sel>.json       ← generated/<domain>/fields/<sel>.json
-      /source/schema/<domain>/output/<api>.json       ← generated/<domain>/output/<api>.json
+    Resolution consults the staging tables (AUTHORED_COPIES,
+    GENERATED_COPIES) and the DOMAINS list — NOT just URL shape — so a
+    well-formed URL that the staging pipeline won't publish (e.g.
+    `/source/schema/gedi/fields/foo.json`, because `gedi/fields` isn't
+    in GENERATED_COPIES) is rejected rather than probing whatever
+    happens to be on disk.
+
+    Returns None if the URL doesn't correspond to anything the pipeline
+    will emit.
     """
-    if not url.startswith("/source/"):
+    if not url.startswith("/"):
         return None
-    parts = url[len("/source/"):].split("/")
-    if parts == ["schema.json"]:
-        return root / "authored" / "schema.json"
-    if not parts or parts[0] != "schema":
+    url_rel = url[1:]  # relative to merged/, e.g. "source/schema/core.json"
+
+    # Case A: the URL is the merged destination of an AUTHORED_COPIES row
+    # (schema.json, errors/not-found.json, <domain>/fields.json listings).
+    for src_rel, dst_rel in AUTHORED_COPIES:
+        if dst_rel == url_rel:
+            return root / "authored" / src_rel
+
+    # Case B: /source/schema/<domain>.json — produced by merge_domain for
+    # domains in DOMAINS. Any other <domain> is not published by this merge.
+    parts = url_rel.split("/")
+    if len(parts) == 3 and parts[0] == "source" and parts[1] == "schema" and parts[2].endswith(".json"):
+        domain = parts[2][: -len(".json")]
+        if domain in DOMAINS:
+            return root / "generated" / domain / "params.json"
         return None
-    sub = parts[1:]
-    if len(sub) == 1 and sub[0].endswith(".json"):
-        return root / "generated" / sub[0][:-len(".json")] / "params.json"
-    if len(sub) == 2 and sub[1] == "fields.json":
-        return root / "authored" / sub[0] / "fields.json"
-    if len(sub) == 3 and sub[1] in ("fields", "output"):
-        return root / "generated" / sub[0] / sub[1] / sub[2]
+
+    # Case C: a direct child of a GENERATED_COPIES destination directory.
+    # (Only direct children are staged — we don't recurse.)
+    for src_rel, dst_rel in GENERATED_COPIES:
+        prefix = dst_rel + "/"
+        if url_rel.startswith(prefix):
+            rest = url_rel[len(prefix):]
+            if "/" in rest:
+                return None
+            return root / "generated" / src_rel / rest
+
     return None
 
 
