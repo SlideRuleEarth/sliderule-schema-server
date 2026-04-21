@@ -1,7 +1,8 @@
 {
-  "//": "Branch protection draft for `main` — apply via:",
+  "//": "Live branch protection for `main`. Apply via:",
   "//apply": "gh api -X PUT repos/SlideRuleEarth/sliderule-schema-server/branches/main/protection --input .github/branch-protection.json",
   "//unapply": "gh api -X DELETE repos/SlideRuleEarth/sliderule-schema-server/branches/main/protection",
+  "//approvals_note": "required_approving_review_count is 0 because this repo has one active maintainer — GitHub doesn't let PR authors approve their own PRs, so requiring an approval would block every merge. When a second maintainer joins, flip to 1 and re-apply.",
 
   "required_status_checks": {
     "strict": true,
@@ -11,7 +12,7 @@
   "enforce_admins": true,
 
   "required_pull_request_reviews": {
-    "required_approving_review_count": 1,
+    "required_approving_review_count": 0,
     "dismiss_stale_reviews": true,
     "require_code_owner_reviews": false,
     "require_last_push_approval": false
