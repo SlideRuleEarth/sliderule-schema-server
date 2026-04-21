@@ -62,6 +62,17 @@ resource "aws_cloudfront_distribution" "schema" {
       cookies {
         forward = "none"
       }
+      # Forward the three preflight headers so S3's CORS rule (defined in
+      # bucket.tf) can match an OPTIONS request and return 200. Without
+      # these, CloudFront strips Origin / ACRM / ACRH before forwarding to
+      # S3, S3 sees a bare OPTIONS and returns 405, and the response-
+      # headers policy only paints CORS headers onto the 405 — which
+      # stricter browsers reject as a preflight failure.
+      headers = [
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+      ]
     }
 
     # max-age=60 while iterating (per task brief).
