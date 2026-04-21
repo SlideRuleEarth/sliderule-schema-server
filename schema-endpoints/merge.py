@@ -209,6 +209,96 @@ def validate_index_param_counts(root: Path) -> None:
             )
 
 
+def _resolve_url_to_source(url: str, root: Path) -> Path | None:
+    """Map a published URL back to the repo file whose existence means
+    this merge will actually produce that URL. Returns None for URL
+    shapes the staging pipeline doesn't recognize.
+
+    Mapping (must stay in sync with merge_domain + AUTHORED_COPIES + GENERATED_COPIES):
+      /source/schema.json                             ← authored/schema.json
+      /source/schema/<domain>.json                    ← generated/<domain>/params.json  (input to merge_domain)
+      /source/schema/<domain>/fields.json             ← authored/<domain>/fields.json
+      /source/schema/<domain>/fields/<sel>.json       ← generated/<domain>/fields/<sel>.json
+      /source/schema/<domain>/output/<api>.json       ← generated/<domain>/output/<api>.json
+    """
+    if not url.startswith("/source/"):
+        return None
+    parts = url[len("/source/"):].split("/")
+    if parts == ["schema.json"]:
+        return root / "authored" / "schema.json"
+    if not parts or parts[0] != "schema":
+        return None
+    sub = parts[1:]
+    if len(sub) == 1 and sub[0].endswith(".json"):
+        return root / "generated" / sub[0][:-len(".json")] / "params.json"
+    if len(sub) == 2 and sub[1] == "fields.json":
+        return root / "authored" / sub[0] / "fields.json"
+    if len(sub) == 3 and sub[1] in ("fields", "output"):
+        return root / "generated" / sub[0] / sub[1] / sub[2]
+    return None
+
+
+def validate_advertised_urls(root: Path) -> None:
+    """Every URL advertised in the index files must resolve to a source
+    file this merge will publish.
+
+    Without this, stage_generated silently skips missing generated files
+    while schema.json keeps advertising the URL — the resulting merged/
+    is self-inconsistent (index points at a path that 404s) and `make
+    verify` passes because the deletion is committed on both sides.
+
+    Index files scanned:
+      authored/schema.json         → schema_url, fields_url, output_schema_url
+      authored/<domain>/fields.json → selectors[].url
+    """
+    # (label-for-error-message, url)
+    urls: list[tuple[str, str]] = []
+
+    index = load(root / "authored" / "schema.json")
+    for dname, dmeta in index.get("domains", {}).items():
+        for key in ("schema_url", "fields_url"):
+            u = dmeta.get(key)
+            if u:
+                urls.append((f"authored/schema.json: domains.{dname}.{key}", u))
+    for aname, ameta in index.get("apis", {}).items():
+        u = ameta.get("output_schema_url")
+        if u:
+            urls.append((f"authored/schema.json: apis.{aname}.output_schema_url", u))
+
+    for listing_path in sorted((root / "authored").glob("*/fields.json")):
+        listing = load(listing_path)
+        domain = listing_path.parent.name
+        for i, sel in enumerate(listing.get("selectors", [])):
+            u = sel.get("url")
+            if u:
+                urls.append((f"authored/{domain}/fields.json: selectors[{i}].url", u))
+
+    unresolvable: list[tuple[str, str]] = []
+    missing: list[tuple[str, str, Path]] = []
+    for label, url in urls:
+        src = _resolve_url_to_source(url, root)
+        if src is None:
+            unresolvable.append((label, url))
+        elif not src.exists():
+            missing.append((label, url, src))
+
+    if unresolvable:
+        lines = [f"  {label} = {url}" for label, url in unresolvable]
+        raise SystemExit(
+            "advertised URL shape not recognised by the staging pipeline:\n"
+            + "\n".join(lines)
+        )
+    if missing:
+        lines = [
+            f"  {label} = {url}  (expected source: {src.relative_to(root)})"
+            for label, url, src in missing
+        ]
+        raise SystemExit(
+            "advertised URLs reference missing source files:\n"
+            + "\n".join(lines)
+        )
+
+
 def check_authored_files_present(root: Path) -> None:
     """Pre-flight: every file in AUTHORED_COPIES must exist.
 
@@ -260,6 +350,7 @@ def main() -> int:
     validate_all_json(root)
     validate_index_param_counts(root)
     check_authored_files_present(root)
+    validate_advertised_urls(root)
     for domain in DOMAINS:
         generated = load(root / "generated" / domain / "params.json")
         structure = load(root / "authored"  / domain / "structure.json")
