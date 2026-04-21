@@ -1,0 +1,79 @@
+name: ci
+
+# Runs on every PR into main and on every push to main. Designed to be the
+# required status check for branch protection — if this passes, merging is
+# safe; if it fails, the PR should not merge.
+#
+# Three checks, matching what `make verify` asserts locally:
+#   1. merge.py is deterministic and committed merged/ is up-to-date
+#   2. Terraform is gofmt-style clean across terraform/
+#   3. Terraform config parses cleanly (no backend to init, so -backend=false)
+#
+# No AWS creds required — everything here is read-only against the repo.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.9"
+          terraform_wrapper: false
+
+      # `merge.py` must produce the same merged/ tree that's committed.
+      # If it doesn't, someone edited authored/ or generated/ without
+      # running the merge — fail with the diff.
+      - name: merge.py drift check
+        run: |
+          python3 schema-endpoints/merge.py
+          if ! git diff --quiet schema-endpoints/merged/; then
+            echo "::error::merged/ is out of date with authored/ + generated/"
+            git diff schema-endpoints/merged/ | head -200
+            exit 1
+          fi
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive terraform/
+
+      # `-backend=false` skips the S3 backend setup (no AWS creds needed).
+      # `-lockfile=readonly` requires .terraform.lock.hcl to satisfy
+      # required_providers — catches unpinned drift.
+      - name: terraform validate
+        working-directory: terraform
+        run: |
+          terraform init -backend=false -lockfile=readonly
+          terraform validate
+
+      # Paranoia: the new validators in merge.py should also be fine
+      # on a fresh checkout, not just against the committed merged/.
+      # Running merge.py again and checking it succeeds catches any
+      # non-determinism sneaking in.
+      - name: merge.py deterministic rerun
+        run: |
+          python3 schema-endpoints/merge.py
+          git diff --quiet schema-endpoints/merged/
+
+      # Confirm the skill archive still packages cleanly. Doesn't
+      # validate the skill's network behavior (no deployment exists
+      # in CI); just proves the zip command succeeds and the
+      # directory is complete.
+      - name: package skill (sanity)
+        run: make package-skill-schema
