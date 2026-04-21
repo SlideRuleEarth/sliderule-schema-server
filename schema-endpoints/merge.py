@@ -186,12 +186,22 @@ def validate_index_param_counts(root: Path) -> None:
             )
 
 
+def check_authored_files_present(root: Path) -> None:
+    """Pre-flight: every file in AUTHORED_COPIES must exist.
+
+    Raised here (before rmtree) rather than inside stage_authored so a
+    missing authored file doesn't leave merged/ half-rebuilt.
+    """
+    for src_rel, _ in AUTHORED_COPIES:
+        src = root / "authored" / src_rel
+        if not src.exists():
+            raise SystemExit(f"missing authored file: {src}")
+
+
 def stage_authored(root: Path, merged_root: Path) -> None:
     for src_rel, dst_rel in AUTHORED_COPIES:
         src = root / "authored" / src_rel
         dst = merged_root / dst_rel
-        if not src.exists():
-            raise SystemExit(f"missing authored file: {src}")
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, dst)
 
@@ -219,13 +229,20 @@ def main() -> int:
     root = Path(__file__).resolve().parent
     merged_root = root / "merged"
 
-    # Validate read-only before we touch merged/, so a failure leaves the
-    # previous merged/ intact rather than half-rebuilt. Per-domain validation
-    # happens later inside merge_domain() but only reads generated/+authored/,
-    # which is fine.
+    # ---- Pre-flight: every read-only check happens BEFORE we touch merged/.
+    # A failure here leaves the previous merged/ completely intact rather than
+    # half-rebuilt. merge_domain() still validates internally when it runs —
+    # that's defense in depth — but the pre-flight catches the same failures
+    # earlier, when backing out is free.
     validate_index_param_counts(root)
+    check_authored_files_present(root)
+    for domain in DOMAINS:
+        generated = load(root / "generated" / domain / "params.json")
+        structure = load(root / "authored"  / domain / "structure.json")
+        behavior  = load(root / "authored"  / domain / "behavior.json")
+        validate(domain, generated, structure, behavior)
 
-    # Clean rebuild — no stale files survive a path rename.
+    # ---- All validation passed. Safe to destroy + rebuild merged/.
     if merged_root.exists():
         shutil.rmtree(merged_root)
     merged_root.mkdir()
