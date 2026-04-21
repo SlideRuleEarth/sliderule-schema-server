@@ -180,6 +180,8 @@ def validate_all_json(root: Path) -> None:
         if not tier_dir.is_dir():
             continue
         for path in sorted(tier_dir.rglob("*.json")):
+            if not path.is_file():
+                continue  # e.g. a directory literally named foo.json
             try:
                 with path.open() as f:
                     json.load(f)
@@ -242,13 +244,15 @@ def _resolve_url_to_source(url: str, root: Path) -> Path | None:
             return root / "generated" / domain / "params.json"
         return None
 
-    # Case C: a direct child of a GENERATED_COPIES destination directory.
-    # (Only direct children are staged — we don't recurse.)
+    # Case C: a direct-child *.json file under a GENERATED_COPIES destination.
+    # stage_generated only globs *.json and doesn't recurse, so anything
+    # else (a subdirectory, a non-JSON sibling) isn't publishable even if
+    # the path exists on disk.
     for src_rel, dst_rel in GENERATED_COPIES:
         prefix = dst_rel + "/"
         if url_rel.startswith(prefix):
             rest = url_rel[len(prefix):]
-            if "/" in rest:
+            if "/" in rest or not rest.endswith(".json"):
                 return None
             return root / "generated" / src_rel / rest
 
@@ -296,7 +300,10 @@ def validate_advertised_urls(root: Path) -> None:
         src = _resolve_url_to_source(url, root)
         if src is None:
             unresolvable.append((label, url))
-        elif not src.exists():
+        elif not src.is_file():
+            # is_file() rather than exists() — a directory at the expected
+            # path (symlink weirdness, accidental mkdir) is not a publishable
+            # file and should fail the check.
             missing.append((label, url, src))
 
     if unresolvable:
