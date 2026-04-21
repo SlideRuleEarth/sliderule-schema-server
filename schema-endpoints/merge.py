@@ -167,6 +167,25 @@ def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
 # Staging helpers
 # ---------------------------------------------------------------------------
 
+def validate_index_param_counts(root: Path) -> None:
+    """Fail if authored/schema.json's advertised param_count drifts from reality.
+
+    Only cross-checks the domains we actually split (DOMAINS). Domains
+    without a generated/params.json (e.g. swot/cre) are left alone.
+    """
+    index = load(root / "authored" / "schema.json")
+    for domain, meta in index.get("domains", {}).items():
+        advertised = meta.get("param_count")
+        if advertised is None or domain not in DOMAINS:
+            continue
+        actual = len(load(root / "generated" / domain / "params.json")["params"])
+        if advertised != actual:
+            raise SystemExit(
+                f"authored/schema.json advertises {domain}.param_count={advertised} "
+                f"but generated/{domain}/params.json has {actual} top-level params"
+            )
+
+
 def stage_authored(root: Path, merged_root: Path) -> None:
     for src_rel, dst_rel in AUTHORED_COPIES:
         src = root / "authored" / src_rel
@@ -199,6 +218,12 @@ def stage_generated(root: Path, merged_root: Path) -> None:
 def main() -> int:
     root = Path(__file__).resolve().parent
     merged_root = root / "merged"
+
+    # Validate read-only before we touch merged/, so a failure leaves the
+    # previous merged/ intact rather than half-rebuilt. Per-domain validation
+    # happens later inside merge_domain() but only reads generated/+authored/,
+    # which is fine.
+    validate_index_param_counts(root)
 
     # Clean rebuild — no stale files survive a path rename.
     if merged_root.exists():

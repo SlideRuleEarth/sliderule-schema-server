@@ -3,20 +3,20 @@
   "domains": {
     "core": {
       "description": "Shared parameters inherited by all mission-specific domains.",
-      "param_count": 19,
+      "param_count": 16,
       "schema_url": "/source/schema/core.json"
     },
     "icesat2": {
       "description": "ICESat-2 photon-counting laser altimetry parameters.",
       "inherits": "core",
-      "param_count": 51,
+      "param_count": 33,
       "schema_url": "/source/schema/icesat2.json",
       "fields_url": "/source/schema/icesat2/fields.json"
     },
     "gedi": {
       "description": "GEDI full-waveform lidar parameters.",
       "inherits": "core",
-      "param_count": 31,
+      "param_count": 12,
       "schema_url": "/source/schema/gedi.json"
     }
   },
