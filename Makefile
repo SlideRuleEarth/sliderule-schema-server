@@ -23,7 +23,7 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "Distributio
 BUILD_DIR = $(ROOT)/build
 SRC_DIR   = $(ROOT)/schema-endpoints
 
-.PHONY: help build clean deploy smoketest verify terraform-apply terraform-destroy check-vars \
+.PHONY: help build clean deploy smoketest verify tf-fmt tf-fmt-check terraform-apply terraform-destroy check-vars \
         deploy-to-testsliderule deploy-to-slideruleearth \
         destroy-testsliderule destroy-slideruleearth \
         live-update-testsliderule live-update-slideruleearth
@@ -46,7 +46,7 @@ clean: ## Remove the build/ tree
 build: ## Run merge, then stage schema-endpoints/merged/ into build/
 	@bash $(ROOT)/scripts/build.sh
 
-verify: ## Check merged/ is up to date with authored/ + generated/
+verify: tf-fmt-check ## Check merged/ is up to date + Terraform is formatted
 	@python3 schema-endpoints/merge.py > /dev/null
 	@if ! git diff --quiet schema-endpoints/merged/; then \
 	  echo "❌ merged/ is out of date. Run 'python3 schema-endpoints/merge.py' and commit the result."; \
@@ -54,6 +54,17 @@ verify: ## Check merged/ is up to date with authored/ + generated/
 	  exit 1; \
 	fi
 	@echo "✅ merged/ is up to date with authored/ + generated/"
+
+tf-fmt: ## Format all Terraform files in place
+	terraform fmt -recursive terraform/
+
+tf-fmt-check: ## Verify Terraform formatting (fails if drift; CI gate)
+	@terraform fmt -check -recursive terraform/ > /dev/null || { \
+	  echo "❌ Terraform formatting drift. Run 'make tf-fmt' and commit."; \
+	  terraform fmt -check -diff -recursive terraform/ | head -40; \
+	  exit 1; \
+	}
+	@echo "✅ Terraform formatting clean"
 
 # ---- Sync + invalidate ----------------------------------------------------------------------------
 

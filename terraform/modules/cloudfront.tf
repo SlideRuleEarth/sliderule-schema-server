@@ -35,11 +35,11 @@ resource "aws_cloudfront_response_headers_policy" "cors" {
 }
 
 resource "aws_cloudfront_distribution" "schema" {
-  depends_on = [aws_s3_bucket.schema_bucket]
-  enabled    = true
+  depends_on      = [aws_s3_bucket.schema_bucket]
+  enabled         = true
   is_ipv6_enabled = true
-  aliases    = [var.domainName]
-  comment    = "SlideRule schema JSON server (${var.domainName})"
+  aliases         = [var.domainName]
+  comment         = "SlideRule schema JSON server (${var.domainName})"
 
   origin {
     domain_name = aws_s3_bucket.schema_bucket.bucket_regional_domain_name
