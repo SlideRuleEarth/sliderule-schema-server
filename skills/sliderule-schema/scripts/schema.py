@@ -1,0 +1,142 @@
+"""Thin HTTP client for the sliderule-schema distribution.
+
+GETs a JSON document from the schema server and prints it to stdout.
+Pure transport wrapper — the schema distribution is plain static JSON
+behind CloudFront, so all "retrieval" is a single HTTP GET.
+
+See skills/sliderule-schema/SKILL.md for the URL layout and how to
+interpret the returned documents.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from urllib.parse import urlparse
+
+
+def _missing_deps_exit(exc: ModuleNotFoundError) -> None:
+    # The install hint uses the bare package name rather than
+    # `-r .../requirements.txt` because the skill's root path on disk
+    # depends on where it was installed — /mnt/skills/user/... inside
+    # Claude's sandbox, the repo layout locally, etc. `pip install
+    # requests` works everywhere and says exactly what's needed.
+    print(
+        f"\nERROR: required package '{exc.name}' is not installed.\n\n"
+        f"This skill's only Python dependency is `requests`. Install it:\n"
+        f"\n"
+        f"  pip install requests\n",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
+
+try:
+    import requests
+except ModuleNotFoundError as e:
+    _missing_deps_exit(e)
+
+
+# Points at the test/staging environment by design — we're still
+# iterating on the skill against testsliderule.org. Flip to
+# https://schema.slideruleearth.io once we cut over to production.
+DEFAULT_BASE_URL = "https://schema.testsliderule.org"
+
+# The default GET target when no path argument is given.
+# schema.json is the self-describing index — it lists every other URL
+# the distribution publishes, so an agent starting cold can discover
+# everything else from this one document.
+DEFAULT_PATH = "source/schema.json"
+
+
+def log(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
+
+
+def resolve_url(path: str, base_override: str | None) -> str:
+    """Build the full URL to GET.
+
+    Precedence for base: --base-url > SLIDERULE_SCHEMA_BASE env var >
+    built-in default. `path` is always relative to the base; a leading
+    `/` on `path` is tolerated but not required.
+    """
+    if base_override is not None:
+        parsed = urlparse(base_override)
+        if not parsed.scheme or not parsed.netloc:
+            print(
+                f"ERROR: --base-url must be a full URL with scheme and host "
+                f"(e.g. https://schema.example.com). Got: {base_override!r}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        base = base_override
+    else:
+        base = os.environ.get("SLIDERULE_SCHEMA_BASE", DEFAULT_BASE_URL)
+
+    base = base.rstrip("/")
+    rel = path.lstrip("/")
+    return f"{base}/{rel}"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_PATH,
+        help=(
+            "Path relative to the distribution base. "
+            f"Default: {DEFAULT_PATH} (the self-describing index). "
+            "Examples: source/schema/icesat2.json, "
+            "source/schema/icesat2/output/atl06x.json."
+        ),
+    )
+    parser.add_argument(
+        "--base-url",
+        default=None,
+        help=(
+            "Override the distribution base URL. Otherwise "
+            f"SLIDERULE_SCHEMA_BASE env var or {DEFAULT_BASE_URL}."
+        ),
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="HTTP timeout in seconds (default: 30).",
+    )
+    args = parser.parse_args()
+
+    url = resolve_url(args.path, args.base_url)
+
+    log(f"GET {url}")
+    try:
+        resp = requests.get(url, timeout=args.timeout)
+    except requests.RequestException as e:
+        print(f"\nERROR: request failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
+
+    if resp.status_code != 200:
+        print(
+            f"\nERROR: server returned {resp.status_code}\n"
+            f"  url={url}\n"
+            f"  body={resp.text[:500]}",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        payload = resp.json()
+    except ValueError as e:
+        print(f"\nERROR: non-JSON response: {e}", file=sys.stderr)
+        return 2
+
+    json.dump(payload, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
