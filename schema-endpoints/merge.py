@@ -366,16 +366,43 @@ def validate_advertised_urls(root: Path) -> None:
         )
 
 
-def check_authored_files_present(root: Path) -> None:
-    """Pre-flight: every file in AUTHORED_COPIES must exist.
+def validate_stage_sources(root: Path) -> None:
+    """Pre-flight: every source that stage_authored or stage_generated
+    would copy must be a regular file, not a directory.
 
-    Raised here (before rmtree) rather than inside stage_authored so a
-    missing authored file doesn't leave merged/ half-rebuilt.
+    Uses is_file() (not exists()) throughout so a directory named
+    authored/errors/not-found.json, or a generated/.../foo.json directory
+    that the *.json glob would happen to pick up, is caught here rather
+    than failing shutil.copyfile after rmtree.
     """
+    missing: list[str] = []
+    not_a_file: list[str] = []
+
     for src_rel, _ in AUTHORED_COPIES:
         src = root / "authored" / src_rel
         if not src.exists():
-            raise SystemExit(f"missing authored file: {src}")
+            missing.append(f"  authored/{src_rel}")
+        elif not src.is_file():
+            not_a_file.append(f"  authored/{src_rel}")
+
+    for src_rel, _ in GENERATED_COPIES:
+        src_dir = root / "generated" / src_rel
+        if not src_dir.is_dir():
+            # Whole directory absent is acceptable — stage_generated skips.
+            continue
+        for candidate in sorted(src_dir.glob("*.json")):
+            if not candidate.is_file():
+                not_a_file.append(f"  generated/{src_rel}/{candidate.name}")
+
+    if missing:
+        raise SystemExit(
+            "required authored source files are missing:\n" + "\n".join(missing)
+        )
+    if not_a_file:
+        raise SystemExit(
+            "stage sources are not regular files (directory or symlink-to-dir):\n"
+            + "\n".join(not_a_file)
+        )
 
 
 def stage_authored(root: Path, merged_root: Path) -> None:
@@ -416,7 +443,7 @@ def main() -> int:
     # earlier, when backing out is free.
     validate_all_json(root)
     validate_index_param_counts(root)
-    check_authored_files_present(root)
+    validate_stage_sources(root)
     validate_advertised_urls(root)
     for domain in DOMAINS:
         generated = load(root / "generated" / domain / "params.json")
