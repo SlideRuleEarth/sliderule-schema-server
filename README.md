@@ -270,6 +270,28 @@ curl  /source/schema/cre.json                                   -> 404 applicati
 curl -H "Origin: https://example.com" /source/schema.json       -> header Access-Control-Allow-Origin: *
 ```
 
+## Skill packaging
+
+The repo ships a Claude skill at
+[`skills/sliderule-schema/`](skills/sliderule-schema/) — a thin HTTPS
+client that fetches JSON from the deployed schema distribution. Pure
+transport: all interpretation lives in
+[`SKILL.md`](skills/sliderule-schema/SKILL.md).
+
+```bash
+make package-skill-schema    # → skills/sliderule-schema.skill
+make package-skills          # same thing today (future-proof for more skills)
+```
+
+Each `.skill` archive is a zip with the skill directory at the root
+(e.g. `sliderule-schema/…`). Packages are ~3 KB — `SKILL.md` plus one
+tiny Python client, no corpus or model bytes bundled. Archives are
+gitignored (`/skills/*.skill`); the on-disk `skills/<name>/` directory
+is the source of truth, rebuilt on demand.
+
+Mirrors the pattern in [sliderule-search-server](../sliderule-search-server/),
+which ships `sliderule-docsearch` and `nsidc-reference` the same way.
+
 ## First-time setup
 
 1. Populate `schema-endpoints/authored/` and `schema-endpoints/generated/`
@@ -282,7 +304,7 @@ curl -H "Origin: https://example.com" /source/schema.json       -> header Access
      record.
    - The same wrapper then runs `live-update`, which verifies, stages,
      and syncs the JSON tree and kicks off an invalidation.
-4. `make smoketest DOMAIN=schema.testsliderule.org`
+4. `make smoketest-testsliderule`
 
 CloudFront distribution creation takes a few minutes; DNS propagation can
 take a few more. If `smoketest` fails immediately after the first apply,
@@ -294,7 +316,7 @@ give it 5–10 minutes and re-run.
 # After editing anything under schema-endpoints/authored/ or schema-endpoints/generated/:
 python3 schema-endpoints/merge.py      # refresh merged/, commit the diff
 make live-update-testsliderule         # verify + build + sync + invalidate
-make smoketest DOMAIN=schema.testsliderule.org
+make smoketest-testsliderule
 ```
 
 ## Configuration surface

@@ -23,10 +23,13 @@ DISTRIBUTION_ID = $(shell aws cloudfront list-distributions --query "Distributio
 BUILD_DIR = $(ROOT)/build
 SRC_DIR   = $(ROOT)/schema-endpoints
 
-.PHONY: help build clean deploy smoketest verify tf-fmt tf-fmt-check terraform-apply terraform-destroy check-vars \
+.PHONY: help build clean deploy smoketest verify tf-fmt tf-fmt-check \
+        package-skill-schema package-skills \
+        terraform-apply terraform-destroy check-vars \
         deploy-to-testsliderule deploy-to-slideruleearth \
         destroy-testsliderule destroy-slideruleearth \
-        live-update-testsliderule live-update-slideruleearth
+        live-update-testsliderule live-update-slideruleearth \
+        smoketest-testsliderule smoketest-slideruleearth
 
 help: ## That's me!
 	@printf "\033[37m%-40s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
@@ -115,6 +118,13 @@ terraform-destroy: ## Tear down the bucket + distribution + DNS via Terraform
 smoketest: ## curl the public endpoints and verify status + Content-Type + CORS
 	@DOMAIN=$(DOMAIN) bash $(ROOT)/scripts/smoketest.sh
 
+# ---- Claude skill packaging ----------------------------------------------------------------------
+
+package-skill-schema: ## Package skills/sliderule-schema/ into a .skill zip
+	@bash $(ROOT)/scripts/package_skill.sh sliderule-schema
+
+package-skills: package-skill-schema ## Package all skills
+
 # ---- Per-environment wrappers (mirror sliderule-web-client conventions) ---------------------------
 
 deploy-to-testsliderule: ## Create infra + upload content at schema.testsliderule.org
@@ -123,6 +133,9 @@ deploy-to-testsliderule: ## Create infra + upload content at schema.testsliderul
 
 live-update-testsliderule: ## Build + upload + invalidate at schema.testsliderule.org
 	make live-update DOMAIN=schema.testsliderule.org S3_BUCKET=sliderule-schema-test DOMAIN_APEX=testsliderule.org
+
+smoketest-testsliderule: ## Smoketest against schema.testsliderule.org
+	make smoketest DOMAIN=schema.testsliderule.org
 
 destroy-testsliderule: ## Tear down schema.testsliderule.org infrastructure
 	make terraform-destroy DOMAIN=schema.testsliderule.org S3_BUCKET=sliderule-schema-test DOMAIN_APEX=testsliderule.org
@@ -133,6 +146,9 @@ deploy-to-slideruleearth: ## Create infra + upload content at schema.slideruleea
 
 live-update-slideruleearth: ## Build + upload + invalidate at schema.slideruleearth.io
 	make live-update DOMAIN=schema.slideruleearth.io S3_BUCKET=sliderule-schema-prod DOMAIN_APEX=slideruleearth.io
+
+smoketest-slideruleearth: ## Smoketest against schema.slideruleearth.io
+	make smoketest DOMAIN=schema.slideruleearth.io
 
 destroy-slideruleearth: ## Tear down schema.slideruleearth.io infrastructure
 	make terraform-destroy DOMAIN=schema.slideruleearth.io S3_BUCKET=sliderule-schema-prod DOMAIN_APEX=slideruleearth.io

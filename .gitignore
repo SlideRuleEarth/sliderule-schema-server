@@ -44,6 +44,11 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# ---- Claude skill archives -------------------------------------------------
+# Rebuilt on demand by `make package-skill-*`; the on-disk skill
+# directories (skills/<name>/) are the source of truth.
+/skills/*.skill
+
 # ---- OS noise --------------------------------------------------------------
 .DS_Store
 Thumbs.db
