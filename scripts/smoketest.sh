@@ -73,16 +73,25 @@ if command -v jq >/dev/null 2>&1; then
   curl -sS "$BASE/source/schema/icesat2/output/atl06x.json" | jq -c '{columns: (.columns | length)}' || fail=$((fail+1))
 fi
 
-# CORS preflight response must carry Access-Control-Allow-Origin: *.
+# Real OPTIONS preflight — the request a browser sends before a
+# cross-origin GET. Must return 2xx with Access-Control-Allow-Origin:*
+# and Access-Control-Allow-Methods containing GET.
 echo
-echo "CORS check:"
-acao="$(curl -sS -I -H "Origin: https://example.com" "$BASE/source/schema.json" \
-  | awk 'tolower($1)=="access-control-allow-origin:"{print $2}' | tr -d '\r')"
-if [[ "$acao" == "*" ]]; then
-  echo "  PASS  Access-Control-Allow-Origin: *"
+echo "CORS preflight (OPTIONS):"
+preflight="$(curl -sS -X OPTIONS \
+  -H 'Origin: https://example.com' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Access-Control-Request-Headers: content-type' \
+  -D - "$BASE/source/schema.json" -o /dev/null)"
+status=$(printf '%s\n' "$preflight" | awk '/^HTTP\//{print $2; exit}')
+acao=$(  printf '%s\n' "$preflight" | awk 'tolower($1)=="access-control-allow-origin:"{print $2}'                                    | tr -d '\r')
+acam=$(  printf '%s\n' "$preflight" | awk 'tolower($1)=="access-control-allow-methods:"{print substr($0, index($0,$2))}'             | tr -d '\r')
+
+if [[ "$status" =~ ^2 && "$acao" == "*" && "$acam" == *GET* ]]; then
+  echo "  PASS  OPTIONS -> status=$status, ACAO=$acao, ACAM='$acam'"
   pass=$((pass+1))
 else
-  echo "  FAIL  Access-Control-Allow-Origin: '$acao' (expected '*')"
+  echo "  FAIL  OPTIONS -> status='$status' ACAO='$acao' ACAM='$acam' (expected 2xx, ACAO=*, ACAM containing GET)"
   fail=$((fail+1))
 fi
 
