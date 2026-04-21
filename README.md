@@ -172,6 +172,50 @@ make live-update-testsliderule   Content only (assumes infra exists)
 make destroy-testsliderule       Tear down the test env
 ```
 
+## Repo artifacts policy
+
+[`schema-endpoints/merged/`](schema-endpoints/merged/) is a build
+artifact — output of [`merge.py`](schema-endpoints/merge.py) from
+`authored/` + `generated/` — that is nevertheless **committed to git**.
+Two concrete reasons:
+
+1. **Paired-diff review.** Every source edit under `authored/` or
+   `generated/` is committed alongside the resulting `merged/` diff, so
+   reviewers see the exact bytes going to S3 next to the edit that
+   caused them. A coupling added in `authored/icesat2/behavior.json`
+   shows up paired with the new field appearing in the correct param in
+   the merged `source/schema/icesat2.json` — catches translation bugs
+   (wrong group, wrong position) that the source diff alone wouldn't
+   surface.
+
+2. **A simple drift check.** `make verify` asserts `git diff --quiet
+   schema-endpoints/merged/` after running `merge.py`. If someone edits
+   `authored/` or `generated/` without regenerating, the diff is
+   non-empty and verify fails. No schema-comparison logic needed — just
+   git. The merge is deterministic (no `sort_keys`, `indent=2`, trailing
+   newline) so the git-diff check is reliable.
+
+**`terraform/.terraform.lock.hcl` is also committed** (per HashiCorp
+recommendation): without it, `terraform init` picks the latest provider
+matching the version constraint and different teammates resolve to
+different SHAs. Committing the lock pins the whole team to the same
+provider build.
+
+**Ignored (see [.gitignore](.gitignore)):**
+
+- `/build/` — downstream of `merged/` (pure `cp -R`). No new review
+  signal, regenerated on every `make build`.
+- `**/.terraform/*`, `*.tfstate*`, `*.tfplan`, `*.tfvars` — ephemeral
+  or secret-bearing. Terraform state lives in S3 per
+  [terraform/backend.tf](terraform/backend.tf).
+- `__pycache__/`, `*.pyc`, `.DS_Store`, etc. — per-user / per-OS
+  noise.
+
+**Workflow implication.** Edits to `authored/` or `generated/` are
+two-step commits: change the source, `python3 schema-endpoints/merge.py`,
+`git add` both trees, commit together. The friction is deliberate —
+it's the price of the paired-diff review benefit.
+
 ## Distribution configuration
 
 - **Origin:** S3 bucket, fronted by an Origin Access Identity. The bucket is

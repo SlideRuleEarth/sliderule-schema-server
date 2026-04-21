@@ -15,7 +15,9 @@ schema-endpoints/
 going to S3. `make verify` (from the repo root) asserts `merged/`
 matches what `merge.py` would produce today, catching any drift
 introduced by editing `authored/` or `generated/` without re-running
-the merge.
+the merge. See the repo-wide artifacts policy in
+[../README.md](../README.md#repo-artifacts-policy) for the rationale
+and the rules for other committed/ignored paths.
 
 ## What lives in each tier
 
