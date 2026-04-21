@@ -260,43 +260,86 @@ def _resolve_url_to_source(url: str, root: Path) -> Path | None:
 
 
 def validate_advertised_urls(root: Path) -> None:
-    """Every URL advertised in the index files must resolve to a source
-    file this merge will publish.
+    """Every URL advertised in the index files must (a) match what its
+    surrounding label implies, (b) resolve to a publishable source the
+    staging pipeline recognises, and (c) point at an actual file on disk.
 
-    Without this, stage_generated silently skips missing generated files
-    while schema.json keeps advertising the URL — the resulting merged/
-    is self-inconsistent (index points at a path that 404s) and `make
-    verify` passes because the deletion is committed on both sides.
+    (a) is the semantic check: domains.gedi.schema_url must be
+    /source/schema/gedi.json — not /source/schema/core.json, even though
+    the latter is a valid publishable URL. (b) + (c) are the pipeline
+    consistency checks.
 
     Index files scanned:
-      authored/schema.json         → schema_url, fields_url, output_schema_url
+      authored/schema.json          → schema_url, fields_url, output_schema_url
       authored/<domain>/fields.json → selectors[].url
     """
-    # (label-for-error-message, url)
-    urls: list[tuple[str, str]] = []
+    # (label, expected_url, advertised_url) per advertised slot
+    slots: list[tuple[str, str, str]] = []
 
     index = load(root / "authored" / "schema.json")
     for dname, dmeta in index.get("domains", {}).items():
-        for key in ("schema_url", "fields_url"):
-            u = dmeta.get(key)
-            if u:
-                urls.append((f"authored/schema.json: domains.{dname}.{key}", u))
+        for key, expected_fmt in (
+            ("schema_url", "/source/schema/{dname}.json"),
+            ("fields_url", "/source/schema/{dname}/fields.json"),
+        ):
+            adv = dmeta.get(key)
+            if adv is None:
+                continue
+            slots.append((
+                f"authored/schema.json: domains.{dname}.{key}",
+                expected_fmt.format(dname=dname),
+                adv,
+            ))
     for aname, ameta in index.get("apis", {}).items():
-        u = ameta.get("output_schema_url")
-        if u:
-            urls.append((f"authored/schema.json: apis.{aname}.output_schema_url", u))
+        adv = ameta.get("output_schema_url")
+        if adv is None:
+            continue
+        domain = ameta.get("domain")
+        if not domain:
+            raise SystemExit(
+                f"authored/schema.json: apis.{aname} has output_schema_url but no 'domain' field"
+            )
+        slots.append((
+            f"authored/schema.json: apis.{aname}.output_schema_url",
+            f"/source/schema/{domain}/output/{aname}.json",
+            adv,
+        ))
 
     for listing_path in sorted((root / "authored").glob("*/fields.json")):
         listing = load(listing_path)
         domain = listing_path.parent.name
         for i, sel in enumerate(listing.get("selectors", [])):
-            u = sel.get("url")
-            if u:
-                urls.append((f"authored/{domain}/fields.json: selectors[{i}].url", u))
+            adv = sel.get("url")
+            if adv is None:
+                continue
+            name = sel.get("name")
+            if not name:
+                raise SystemExit(
+                    f"authored/{domain}/fields.json: selectors[{i}] has url but no 'name' field"
+                )
+            slots.append((
+                f"authored/{domain}/fields.json: selectors[{i}].url",
+                f"/source/schema/{domain}/fields/{name}.json",
+                adv,
+            ))
+
+    # Check in order: semantic mismatch, then shape, then file existence.
+    # A URL that fails the semantic check isn't checked further — the
+    # targeted error tells the user what to fix first.
+    mismatched = [(l, e, a) for l, e, a in slots if e != a]
+    if mismatched:
+        lines = [
+            f"  {label} = {adv}\n      expected: {exp}"
+            for label, exp, adv in mismatched
+        ]
+        raise SystemExit(
+            "advertised URLs disagree with their surrounding label:\n"
+            + "\n".join(lines)
+        )
 
     unresolvable: list[tuple[str, str]] = []
     missing: list[tuple[str, str, Path]] = []
-    for label, url in urls:
+    for label, _expected, url in slots:
         src = _resolve_url_to_source(url, root)
         if src is None:
             unresolvable.append((label, url))
