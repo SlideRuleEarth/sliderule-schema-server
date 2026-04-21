@@ -167,6 +167,29 @@ def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
 # Staging helpers
 # ---------------------------------------------------------------------------
 
+def validate_all_json(root: Path) -> None:
+    """Parse every *.json under authored/ and generated/.
+
+    stage_generated copies files with shutil.copyfile without parsing them,
+    so a malformed generated file could otherwise be staged into merged/
+    and served as application/json. Parsing here — pre-flight, before any
+    destructive step — fails fast with the offending file's path.
+    """
+    for tier in ("authored", "generated"):
+        tier_dir = root / tier
+        if not tier_dir.is_dir():
+            continue
+        for path in sorted(tier_dir.rglob("*.json")):
+            try:
+                with path.open() as f:
+                    json.load(f)
+            except json.JSONDecodeError as e:
+                raise SystemExit(
+                    f"invalid JSON in {path.relative_to(root)}: "
+                    f"line {e.lineno} col {e.colno}: {e.msg}"
+                )
+
+
 def validate_index_param_counts(root: Path) -> None:
     """Fail if authored/schema.json's advertised param_count drifts from reality.
 
@@ -234,6 +257,7 @@ def main() -> int:
     # half-rebuilt. merge_domain() still validates internally when it runs —
     # that's defense in depth — but the pre-flight catches the same failures
     # earlier, when backing out is free.
+    validate_all_json(root)
     validate_index_param_counts(root)
     check_authored_files_present(root)
     for domain in DOMAINS:
