@@ -153,6 +153,31 @@ non-JSON body) go to stderr with exit code 2.
    beyond your summary will follow the links — the distribution is
    fast and free to hit directly.
 
+## Relationship to other sliderule skills
+
+This skill is the transport layer for every schema-backed fact the
+other SlideRule skills reference. The URLs listed there are path
+arguments to this skill's fetcher, not bare HTTP targets.
+
+- **`sliderule-params`** consults this skill during request planning
+  to look up parameter names, defaults, couplings (`depends_on`,
+  `required_pairings`, `implicit_behavior`), and `applies_to` per
+  endpoint. All facts about what parameters mean come from here.
+- **`sliderule-api`** points here for any schema question — that skill
+  covers only the Processing API (`POST /arrow/{api}`), never the
+  Schema API.
+- **`sliderule-analysis`** consults this skill after receiving a
+  response to resolve column meanings. The response's `sliderule`
+  metadata names the algorithm that ran and the selectors that were
+  populated; use that to pick which schema documents to fetch (output
+  schema for the API, field-selector schemas for each `*_fields`
+  entry, core's `raster_sampling` group for sample columns).
+
+Invoke this skill directly when the user asks a schema-shaped question
+("what does `cnf` do?", "what columns does `atl06x` return?"); invoke
+it indirectly — as the transport for the planning / execution /
+analysis workflow — through the skills above.
+
 ## Not covered
 
 - **How to use the APIs** (Python client calls, request bodies,
