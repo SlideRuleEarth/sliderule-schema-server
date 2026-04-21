@@ -1,0 +1,46 @@
+name: codeql
+
+# Static analysis for the Python footprint (merge.py + the skill client).
+# Runs on pushes to main and on PRs into main, plus a weekly re-scan so
+# newly-published advisories against the same code trigger alerts.
+#
+# Alerts surface in GitHub's "Security → Code scanning" tab. PRs get
+# inline annotations on touched lines if CodeQL finds an issue on the
+# diff.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Friday 06:00 UTC — offset from most repo schedules to avoid
+    # contention on Monday-morning GitHub-hosted-runner backlogs.
+    - cron: "0 6 * * 5"
+
+permissions:
+  # Minimal set CodeQL needs to read code + write findings.
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: analyze (python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          # `security-and-quality` is the broadest default query pack;
+          # `security-extended` is only-security-rules (lower noise).
+          # Starting with the former; flip if it produces too many
+          # maintainability nits.
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
