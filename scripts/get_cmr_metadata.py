@@ -23,7 +23,7 @@ def get_dataset_metadata(short_name):
         
     def parse_version(v):
         try: return float(v.strip('vV'))
-        except: return 0.0
+        except Exception: return 0.0
 
     # Sort newest to oldest
     entries = sorted(entries, key=lambda x: parse_version(x.get("version_id", "")), reverse=True)
