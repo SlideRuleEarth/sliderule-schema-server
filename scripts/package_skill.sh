@@ -10,11 +10,13 @@ SKILL_DIR="$ROOT/skills/$SKILL_NAME"
 
 [[ -d "$SKILL_DIR" ]] || { echo "skill dir not found: $SKILL_DIR"; exit 1; }
 
-OUT="$ROOT/skills/${SKILL_NAME}.skill"
+OUT_DIR="$ROOT/tmp_skill_for_export"
+OUT="$OUT_DIR/${SKILL_NAME}.skill"
+mkdir -p "$OUT_DIR"
 rm -f "$OUT"
 
 # Zip from the skills/ parent so the folder is at the root of the zip
-( cd "$ROOT/skills" && zip -r "${SKILL_NAME}.skill" "$SKILL_NAME/" \
+( cd "$ROOT/skills" && zip -r "$OUT" "$SKILL_NAME/" \
   --exclude "*.pyc" --exclude "*__pycache__*" --exclude "*.DS_Store" )
 
 echo

@@ -48,6 +48,7 @@ venv/
 # Rebuilt on demand by `make package-skill-*`; the on-disk skill
 # directories (skills/<name>/) are the source of truth.
 /skills/*.skill
+/tmp_skill_for_export/
 
 # ---- OS noise --------------------------------------------------------------
 .DS_Store
