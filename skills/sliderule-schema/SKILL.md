@@ -30,6 +30,11 @@ Flags:
 - `--base-url URL` — override the distribution base (for local dev or
   staging). Default: `https://schema.testsliderule.org`.
 - `--timeout SECONDS` — HTTP timeout (default 30).
+- `-v` / `--verbose` — print the GET URL to stderr before fetching.
+  Default is silent on success so stdout is pure JSON, pipeable
+  directly into a parser. Error paths always print URL + diagnostics
+  regardless of this flag; verbose only helps when the request
+  succeeds (exit 0) but returns unexpected content.
 
 The `SLIDERULE_SCHEMA_BASE` env var picks a different base — the
 skill prepends it to the path argument.
@@ -145,15 +150,17 @@ non-JSON body) go to stderr with exit code 2.
    setting up a request, surface these couplings as required context,
    not optional trivia.
 
-5. **Column `condition` gates output presence.** Columns in
-   `output/<api>.json` with `"condition": "stages.phoreal"` etc. only
-   appear in the DataFrame when the named processing stage runs. If
-   the user asks "why doesn't my result have the `relief` column?",
-   the answer is likely that PhoREAL wasn't enabled in the request.
+5. **Column presence is a two-step check. First: does the column exist in this API's output/<api>.json at all? Columns are per-API — relief lives in atl03x, not atl06x, so no request setting will make it appear in an atl06x result. Second: if the column carries a condition (e.g. "stages.phoreal"), that stage must be enabled in the request. When a user asks "why doesn't my result have the relief column?", check which API they called first: if it's atl03x, PhoREAL likely wasn't enabled; if it's atl06x (or anything else), relief isn't an output of that endpoint at all.
 
 6. **Cite URLs in your answer.** Users who want authoritative detail
    beyond your summary will follow the links — the distribution is
    fast and free to hit directly.
+
+7. **If a request returns 200 but the JSON looks wrong** (unexpected
+   domain, missing fields, stale version, etc.), re-run with
+   `--verbose` to see the exact URL that was hit. Errors already
+   print the URL on their own, so verbose is only needed for this
+   "succeeded but surprised" case.
 
 ## Relationship to other sliderule skills
 

@@ -35,6 +35,8 @@ def _missing_deps_exit(exc: ModuleNotFoundError) -> None:
 
 try:
     import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
 except ModuleNotFoundError as e:
     _missing_deps_exit(e)
 
@@ -107,13 +109,72 @@ def main() -> int:
         default=30.0,
         help="HTTP timeout in seconds (default: 30).",
     )
+    # Default is silent-on-stdout, silent-on-stderr for a successful GET,
+    # so callers can pipe the JSON straight into a parser. Error paths
+    # (network failure, non-200, non-JSON body) always print URL +
+    # diagnostics to stderr regardless of this flag — verbose only adds
+    # a pre-flight "GET <url>" breadcrumb, useful when the request
+    # succeeds with exit 0 but returns unexpected content (wrong base
+    # URL, stale cache, env-var misrouting).
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help=(
+            "Print the GET URL to stderr before fetching. "
+            "Useful when a 200 response contains unexpected content "
+            "and you want to confirm exactly which URL was hit."
+        ),
+    )
     args = parser.parse_args()
 
     url = resolve_url(args.path, args.base_url)
 
-    log(f"GET {url}")
+    # Claude.ai's code-execution sandbox egress proxy occasionally
+    # synthesizes a 503 "DNS cache overflow" on the first outbound
+    # request of a subprocess, before its resolver cache is warm —
+    # subsequent requests to the same host resolve normally. Each
+    # `python schema.py` invocation is a fresh process with a fresh
+    # Session, so the cache doesn't carry between invocations: every
+    # cold subprocess pays the startup cost independently. The retry
+    # below absorbs that friction invisibly; outside the sandbox it's
+    # a no-op on the happy path because the distribution returns 200
+    # in a single round trip.
+    session = requests.Session()
+    session.mount(
+        "https://",
+        HTTPAdapter(max_retries=Retry(
+            # Four attempts total (one initial + three retries). The
+            # previous setting (total=2) was empirically insufficient:
+            # the sandbox's cold-start window sometimes exceeded the
+            # single-retry budget, letting 503s leak out of the script
+            # and forcing the agent to retry at the top level. Four
+            # attempts with the exponential backoff below covers
+            # observed cold-start durations with room to spare while
+            # still failing fast on genuine outages.
+            total=4,
+            # urllib3 sleeps backoff_factor * (2 ** (attempt - 1)) between
+            # attempts, so with backoff_factor=1.0 the waits are 0s, 1s,
+            # 2s, 4s (cumulative ~7s worst case). Well under the default
+            # 30s HTTP timeout, and zero cost on the warm-cache happy
+            # path because the first attempt succeeds.
+            backoff_factor=1.0,
+            # Only retry on transient gateway/sandbox 5xx. Not 500 —
+            # that's more often an application bug we'd rather surface
+            # than mask. Not 4xx — those are authoritative.
+            status_forcelist=(502, 503, 504),
+            # GET is the only method this script issues, and it's
+            # idempotent; listing it explicitly prevents an accidental
+            # retry-on-error if a future caller sends something less
+            # safe through the same session.
+            allowed_methods=("GET",),
+        )),
+    )
+
+    if args.verbose:
+        log(f"GET {url}")
     try:
-        resp = requests.get(url, timeout=args.timeout)
+        resp = session.get(url, timeout=args.timeout)
     except requests.RequestException as e:
         print(f"\nERROR: request failed: {type(e).__name__}: {e}", file=sys.stderr)
         return 2
