@@ -6,9 +6,9 @@
     "Fetches /source/schema/icesat2.json.",
     "Locates `atl08_class` under groups.photon_filtering.params.",
     "Reads the `required_pairings` field on `atl08_class` — NOT just the description.",
-    "Surfaces BOTH required pairings explicitly: `cnf` must be set to 0 (no native filtering), `srt` must be set to 0 (land).",
+    "Surfaces BOTH required pairings explicitly: `cnf` must be set to 0 or lower (cnf=0 is the docs' idiom; cnf=-2 is valid too and matches SlideRule's own classification example), and `srt` must be set to 0 (land).",
     "Treats these as requirements, not suggestions — per SKILL.md section 4 ('These are NOT suggestions').",
-    "Optionally mentions `implicit_behavior` if an ATL08 ancillary field is also requested (auto-classification, unclassified-photon filtering).",
+    "If the answer mentions `implicit_behavior`, it must correctly state that setting atl08_class activates the classifier on its own (the `atl08_class` column appears regardless of atl08_fields), and that atl08_fields requires atl08_class or PhoREAL to already be active. It must NOT claim that atl08_fields is required to activate classification.",
     "Cites the schema URL.",
     "Does NOT invent additional required params beyond what the schema declares — the coupling set is exactly cnf + srt."
   ]
