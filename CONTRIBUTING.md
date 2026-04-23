@@ -67,10 +67,12 @@ schema-endpoints/
 - `authored/<domain>/{structure,behavior}.json` control how params
   are grouped and which couplings they carry.
 - `generated/<domain>/params.json` is the factual parameter baseline.
-- `generated/icesat2/fields/<sel>.json` and `generated/<domain>/output/<api>.json`
-  are produced by the SlideRule repo scripts
-  (`enumerate_h5_fields.py`, `test_server_generated_schema.sh`) and
-  mirrored here.
+- `generated/{icesat2,gedi}/fields/<sel>.json` are produced by
+  `scripts/enumerate_h5_fields.py` in THIS repo (adopted in Apr 2026
+  from the sliderule server repo; extended at adoption time with
+  ATL24 and GEDI support). `generated/<domain>/output/<api>.json`
+  is still produced by `test_server_generated_schema.sh` in the
+  sliderule server repo and mirrored here.
 
 Read [schema-endpoints/README.md](schema-endpoints/README.md) for
 the full split-rule explanation (which fields go where and why).

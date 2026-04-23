@@ -86,7 +86,7 @@ Every file served by the distribution starts life in
 | `/source/schema.json` (domain/API index)      | `schema-endpoints/authored/schema.json`                   | Hand-written in this repo                                               |
 | `/source/schema/{core,icesat2,gedi}.json`     | Merged from `generated/<domain>/params.json` + `authored/<domain>/{structure,behavior}.json` | `generated/<domain>/params.json` will eventually come from the sliderule server's `/source/defaults` endpoint ([`packages/core/endpoints/defaults.lua`](../sliderule/packages/core/endpoints/defaults.lua)); hand-maintained for now |
 | `/source/schema/icesat2/fields.json`          | `schema-endpoints/authored/icesat2/fields.json`           | Hand-written selector listing                                           |
-| `/source/schema/icesat2/fields/<selector>.json` | `schema-endpoints/generated/icesat2/fields/<selector>.json` | `sliderule/schema_fields/fields_<selector>.json` (from `enumerate_h5_fields.py`) |
+| `/source/schema/icesat2/fields/<selector>.json`, `/source/schema/gedi/fields/<selector>.json` | `schema-endpoints/generated/{icesat2,gedi}/fields/<selector>.json` | `schema_fields/fields_<selector>.json` (from local `scripts/enumerate_h5_fields.py`, adopted into this repo Apr 2026) |
 | `/source/schema/icesat2/output/<api>.json`    | `schema-endpoints/generated/icesat2/output/<api>.json`    | `sliderule/tmp_server_generated_schema_test/schema_<API>DataFrame.json` (from `test_server_generated_schema.sh`) |
 | `/source/schema/gedi/output/gedil4ax.json`    | `schema-endpoints/generated/gedi/output/gedil4ax.json`    | `sliderule/tmp_server_generated_schema_test/schema_Gedi04aDataFrame.json` |
 
@@ -95,16 +95,27 @@ Every file served by the distribution starts life in
 Field enumerations (granule-level HDF5 structure):
 
 ```bash
-# From the sliderule repo:
-cd ../sliderule
-python scripts/download_h5_granules.py
-python scripts/enumerate_h5_fields.py
-# Output lands in sliderule/schema_fields/fields_*.json
+# From this repo:
+python3 scripts/download_h5_granules.py --output-dir ./granules/
+python3 scripts/enumerate_h5_fields.py --earthdata --output-dir ./schema_fields/
 
-# Mirror into this repo and re-merge:
-cp ../sliderule/schema_fields/fields_*.json schema-endpoints/generated/icesat2/fields/
+# Or point at granules you already have:
+python3 scripts/enumerate_h5_fields.py \
+    --atl03 granules/ATL03_*.h5 \
+    --atl24 granules/ATL24_*.h5 \
+    --gedi_l4a granules/GEDI04_A_*.h5 \
+    --output-dir ./schema_fields/
+
+# Mirror into schema-endpoints/generated/ and re-merge:
+cp schema_fields/fields_atl*.json schema-endpoints/generated/icesat2/fields/
+cp schema_fields/fields_gedi_*.json schema-endpoints/generated/gedi/fields/
 python3 schema-endpoints/merge.py
 ```
+
+For a new product whose HDF5 group paths aren't yet in `SELECTOR_MAP`,
+use `--walk <granule>` to discover the structure first, then fill in
+the paths in the `SELECTOR_MAP` entry before re-running the normal
+enumeration flow.
 
 Output DataFrame schemas (what the server actually returns per API):
 
