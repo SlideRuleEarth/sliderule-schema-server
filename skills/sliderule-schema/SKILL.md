@@ -116,6 +116,17 @@ The skill prints the fetched JSON, 2-space indented, to stdout —
 byte-for-byte the distribution's response. Errors (network, non-200,
 non-JSON body) go to stderr with exit code 2.
 
+**Note for Claude.ai sandbox users.** The Code Execution sandbox
+wraps every tool invocation in a JSON envelope of the form
+`{"returncode": <int>, "stdout": <str>, "stderr": <str>}` before
+returning the result to the agent. That envelope is the sandbox's
+tool-result format, not something this script writes. To get to the
+schema JSON, parse the envelope first and then `json.loads(envelope
+["stdout"])`, or use the sandbox's shell-pipe abstraction so stdout
+flows directly into the next process. Outside the sandbox (local
+shell, CI, plain subprocess), `python scripts/schema.py | jq` works
+exactly as documented above — no envelope.
+
 ## Agent instructions
 
 1. **Always fetch the index first** if you don't already know which
