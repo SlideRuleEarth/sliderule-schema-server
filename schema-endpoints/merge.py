@@ -15,10 +15,12 @@ Three responsibilities:
    of the domain schema split (the index, the field selector listing,
    the 404 error body) are copied verbatim to their merged/ position.
 
-3. Stage generated directories. Field selectors and output column
-   schemas are produced elsewhere (enumerate_h5_fields.py and the
-   server-side schema dump) and mirrored into merged/ at their S3
-   position. Whole-directory copies keyed off a declarative table.
+3. Stage generated directories. Field selectors are produced by this
+   repo's scripts/enumerate_h5_fields.py; output column schemas are
+   produced by the sliderule server's test_server_generated_schema.sh
+   (still lives in the sliderule repo). Both land under generated/
+   and are mirrored into merged/ at their S3 position. Whole-directory
+   copies keyed off a declarative table.
 
 merged/ is deleted and recreated on every run so nothing from a prior
 run survives. Output is deterministic (no sort_keys, indent=2, trailing

@@ -95,7 +95,7 @@ When editing SKILL.md, prefer moving exhaustive data to `reference/` over inlini
 Some `generated/` files are hand-maintained today but have a long-term source:
 
 - `<domain>/params.json` → sliderule server's `/source/defaults` endpoint
-- `icesat2/fields/<sel>.json` → `sliderule/scripts/enumerate_h5_fields.py`
+- `icesat2/fields/<sel>.json`, `gedi/fields/<sel>.json` → `scripts/enumerate_h5_fields.py` (adopted from the sliderule repo in Apr 2026; ATL24 and GEDI products added at that time)
 - `<domain>/output/<api>.json` → `sliderule/scripts/test_server_generated_schema.sh`
 
 See [README.md](README.md) "Regenerating the source JSON" for the copy-in commands.

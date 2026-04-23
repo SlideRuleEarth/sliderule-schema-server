@@ -67,7 +67,7 @@ Long-term sources:
 | File                                 | Produced by                                                   |
 | ------------------------------------ | ------------------------------------------------------------- |
 | `<domain>/params.json`               | SlideRule server's `/source/defaults` endpoint (future)       |
-| `icesat2/fields/<selector>.json`     | `sliderule/scripts/enumerate_h5_fields.py`                    |
+| `icesat2/fields/<selector>.json`, `gedi/fields/<selector>.json`     | `scripts/enumerate_h5_fields.py` (adopted into this repo Apr 2026)            |
 | `<domain>/output/<api>.json`         | `sliderule/scripts/test_server_generated_schema.sh`           |
 
 ### `merged/` — build artifact
