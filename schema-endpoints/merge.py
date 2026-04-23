@@ -131,6 +131,12 @@ def merge_param(param_data: dict, behavior_entry: dict | None) -> dict:
     return result
 
 
+def _publishable(url: str, root: Path) -> bool:
+    """True iff `url` maps to a source file the staging pipeline will emit."""
+    src = _resolve_url_to_source(url, root)
+    return src is not None and src.is_file()
+
+
 def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
     generated = load(root / "generated" / domain / "params.json")
     structure = load(root / "authored"  / domain / "structure.json")
@@ -154,6 +160,24 @@ def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
             name: merge_param(gen_params[name], behav.get(name))
             for name in group_meta["params"]
         }
+        # For the field_selectors group, add an explicit link from each
+        # request param (e.g. `atl08_fields`) to its corresponding
+        # selector entry in the fields index (bare name `atl08`).
+        # Without this, an agent walking the schema has to *know* the
+        # suffix convention; with it, the mapping is data, not lore.
+        # Only inject when the selector URL actually resolves to a
+        # publishable file — GEDI, for example, has an `anc_fields`
+        # param but no enumerated fields index, so there's nothing to
+        # link to and we leave the param untouched rather than pointing
+        # agents at a 404.
+        if group_name == "field_selectors":
+            for pname, pdata in params_out.items():
+                if pname.endswith("_fields"):
+                    selector = pname[: -len("_fields")]
+                    selector_url = f"/source/schema/{domain}/fields/{selector}.json"
+                    if _publishable(selector_url, root):
+                        pdata["selector"] = selector
+                        pdata["selector_url"] = selector_url
         group_out = {k: v for k, v in group_meta.items() if k != "params"}
         group_out["params"] = params_out
         groups_out[group_name] = group_out
@@ -366,6 +390,53 @@ def validate_advertised_urls(root: Path) -> None:
         )
 
 
+def validate_field_selectors_bijection(root: Path) -> None:
+    """Every selector in authored/<domain>/fields.json must have a
+    corresponding `<name>_fields` param in that domain's
+    field_selectors group, and vice versa.
+
+    merge_domain and enrich_fields_index inject cross-reference fields
+    that assume this bijection holds. Checking it here — pre-flight,
+    before merged/ is touched — turns a silent drift (a selector added
+    without its request param, or a `_fields` param added without its
+    selector file) into a clear, actionable error.
+    """
+    for listing_path in sorted((root / "authored").glob("*/fields.json")):
+        domain = listing_path.parent.name
+        if domain not in DOMAINS:
+            continue
+        structure_path = root / "authored" / domain / "structure.json"
+        if not structure_path.exists():
+            continue
+        fs_group = load(structure_path).get("groups", {}).get("field_selectors")
+        if not fs_group:
+            continue
+
+        selectors = {
+            s["name"]
+            for s in load(listing_path).get("selectors", [])
+            if s.get("name")
+        }
+        param_stems = {
+            p[: -len("_fields")]
+            for p in fs_group.get("params", [])
+            if p.endswith("_fields")
+        }
+
+        missing_params = sorted(selectors - param_stems)
+        missing_selectors = sorted(param_stems - selectors)
+        if missing_params:
+            raise SystemExit(
+                f"[{domain}] selectors in fields.json have no matching "
+                f"<name>_fields param in field_selectors: {missing_params}"
+            )
+        if missing_selectors:
+            raise SystemExit(
+                f"[{domain}] field_selectors params with no matching selector "
+                f"in fields.json: {missing_selectors}"
+            )
+
+
 def validate_stage_sources(root: Path) -> None:
     """Pre-flight: every source that stage_authored or stage_generated
     would copy must be a regular file, not a directory.
@@ -428,6 +499,29 @@ def stage_generated(root: Path, merged_root: Path) -> None:
             shutil.copyfile(src, dst_dir / src.name)
 
 
+def enrich_fields_index(merged_root: Path, domain: str) -> None:
+    """Add `param` to each selector entry in merged/.../fields.json.
+
+    The authored fields.json lists selectors by bare name (`atl08`),
+    while the corresponding request parameter in the domain schema's
+    field_selectors group is `<name>_fields` (`atl08_fields`). Injecting
+    `param` on each selector exposes that mapping to anyone walking
+    the fields index, so they don't have to know the suffix convention.
+    The inverse link (selector + selector_url on each param) is added
+    in merge_domain; the two injections together make the relationship
+    navigable in both directions.
+    """
+    path = merged_root / "source" / "schema" / domain / "fields.json"
+    if not path.exists():
+        return
+    data = load(path)
+    for sel in data.get("selectors", []):
+        name = sel.get("name")
+        if name:
+            sel["param"] = f"{name}_fields"
+    dump(path, data)
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -445,6 +539,7 @@ def main() -> int:
     validate_index_param_counts(root)
     validate_stage_sources(root)
     validate_advertised_urls(root)
+    validate_field_selectors_bijection(root)
     for domain in DOMAINS:
         generated = load(root / "generated" / domain / "params.json")
         structure = load(root / "authored"  / domain / "structure.json")
@@ -461,6 +556,9 @@ def main() -> int:
 
     stage_authored(root, merged_root)
     stage_generated(root, merged_root)
+
+    for domain in DOMAINS:
+        enrich_fields_index(merged_root, domain)
 
     print(f"wrote merged/ with {sum(1 for _ in merged_root.rglob('*') if _.is_file())} files")
     return 0
