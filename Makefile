@@ -30,7 +30,8 @@ SRC_DIR   = $(ROOT)/schema-endpoints
         destroy-testsliderule destroy-slideruleearth \
         live-update-testsliderule live-update-slideruleearth \
         smoketest-testsliderule smoketest-slideruleearth \
-        requests requests-testsliderule requests-slideruleearth
+        requests requests-testsliderule requests-slideruleearth \
+        errors errors-testsliderule errors-slideruleearth
 
 help: ## That's me!
 	@printf "\033[37m%-40s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
@@ -128,11 +129,11 @@ package-skills: package-skill-schema ## Package all skills
 
 # ---- Observability --------------------------------------------------------------------------------
 
-# CloudFront's Requests metric is published per-distribution with
-# Region=Global in us-east-1, so we resolve the distribution ID by
-# domain alias and query CloudWatch directly. Inline lookup (rather
-# than $(DISTRIBUTION_ID) from the top of the Makefile) keeps the base
-# target usable when called directly without a wrapper.
+# CloudFront metrics are published per-distribution with Region=Global
+# in us-east-1, so we resolve the distribution ID by domain alias and
+# query CloudWatch directly. Inline lookup (rather than
+# $(DISTRIBUTION_ID) from the top of the Makefile) keeps the base
+# targets usable when called directly without a wrapper.
 requests: ## Show CloudFront request count (CloudWatch metric, 1-hour buckets, last 24h) (requires DOMAIN)
 	@test -n "$(DOMAIN)" || (echo "❌ DOMAIN is not set"; exit 1)
 	@DIST_ID=$$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text 2>/dev/null); \
@@ -150,6 +151,16 @@ requests: ## Show CloudFront request count (CloudWatch metric, 1-hour buckets, l
 		--query 'sort_by(Datapoints,&Timestamp)[].[Timestamp,Sum]' \
 		| python3 $(ROOT)/scripts/utc_to_local.py
 
+# 4xx/5xx breakdown is a 3-metric join (Requests + 4xxErrorRate +
+# 5xxErrorRate) that would be awkward in shell, so it lives in a
+# Python helper. Counts are derived from rate * Requests because
+# CloudFront's default metric set publishes errors as rates only;
+# direct 4xxErrorCount / 5xxErrorCount metrics need Additional
+# Metrics enabled on the distribution (paid), which we don't assume.
+errors: ## Show CloudFront 4xx/5xx breakdown — count + % per hour, last 24h (requires DOMAIN)
+	@test -n "$(DOMAIN)" || (echo "❌ DOMAIN is not set"; exit 1)
+	@python3 $(ROOT)/scripts/cloudfront_errors.py $(DOMAIN)
+
 # ---- Per-environment wrappers (mirror sliderule-web-client conventions) ---------------------------
 
 deploy-to-testsliderule: ## Create infra + upload content at schema.testsliderule.org
@@ -164,6 +175,9 @@ smoketest-testsliderule: ## Smoketest against schema.testsliderule.org
 
 requests-testsliderule: ## Show CloudFront request count for schema.testsliderule.org (last 24h)
 	make requests DOMAIN=schema.testsliderule.org
+
+errors-testsliderule: ## Show CloudFront total error rate for schema.testsliderule.org (last 24h)
+	make errors DOMAIN=schema.testsliderule.org
 
 destroy-testsliderule: ## Tear down schema.testsliderule.org infrastructure
 	make terraform-destroy DOMAIN=schema.testsliderule.org S3_BUCKET=sliderule-schema-test DOMAIN_APEX=testsliderule.org
@@ -180,6 +194,9 @@ smoketest-slideruleearth: ## Smoketest against schema.slideruleearth.io
 
 requests-slideruleearth: ## Show CloudFront request count for schema.slideruleearth.io (last 24h)
 	make requests DOMAIN=schema.slideruleearth.io
+
+errors-slideruleearth: ## Show CloudFront total error rate for schema.slideruleearth.io (last 24h)
+	make errors DOMAIN=schema.slideruleearth.io
 
 destroy-slideruleearth: ## Tear down schema.slideruleearth.io infrastructure
 	make terraform-destroy DOMAIN=schema.slideruleearth.io S3_BUCKET=sliderule-schema-prod DOMAIN_APEX=slideruleearth.io
