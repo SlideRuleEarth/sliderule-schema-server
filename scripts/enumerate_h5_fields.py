@@ -95,22 +95,20 @@ SELECTOR_MAP = {
         "description": "Inland water surface fields from ATL13.",
         "recursive": False,
     },
-    # ATL24 is NASA's bathymetry product. Structural paths below are a
-    # starting point based on the SlideRule server's Atl24 reader
-    # layout; run `--walk` against a real ATL24 granule to confirm
-    # the exact subgroup names before trusting the output.
-    # TODO(atl24): verify path against a downloaded granule.
+    # ATL24 bathymetry: datasets live directly under the beam group
+    # (no sub-groups), all photon-rate. recursive=True is a no-op here
+    # but kept for symmetry / future-proofing if subgroups are added.
     "atl24": {
         "product": "ATL24",
         "groups": ["gtxx"],
         "description": "Bathymetry-classified photon fields from ATL24.",
         "recursive": True,
     },
-    # GEDI products use BEAM0000..BEAM0011 beam groups rather than the
-    # ICESat-2 gtxx convention. Paths below follow the documented GEDI
-    # L2A / L4A HDF5 layout at ORNL DAAC; verify with `--walk` on first
-    # use and adjust if the schema changes.
-    # TODO(gedi): verify paths against downloaded granules.
+    # GEDI products use binary-encoded beam group names. find_beam_group
+    # handles the BEAMxxxx placeholder substitution. Both L2A and L4A
+    # expose direct datasets plus nested groups (geolocation,
+    # land_cover_data, ancillary, agbd_prediction for L4A), all covered
+    # by recursive=True.
     "gedi_l2a": {
         "product": "GEDI_L2A",
         "groups": ["BEAMxxxx"],
@@ -138,17 +136,23 @@ def find_beam_group(h5file):
     """Find the first available beam group.
 
     ICESat-2 strong + weak beams: gt1l, gt1r, gt2l, gt2r, gt3l, gt3r.
-    GEDI beams: BEAM0000..BEAM0011 (sparse — not all BEAM* numbers exist
-    on every granule, so we enumerate and return the first present).
-    ATL09 uses profile_1/_2/_3 but this function is only called where
-    the caller expects gtxx or BEAMxxxx, so profile_* is handled at the
-    SELECTOR_MAP level (hardcoded path) rather than here.
+    GEDI uses binary-encoded beam IDs (not sequential decimal): the 8
+    GEDI beams are numbered 0, 1, 2, 3, 5, 6, 8, 11, with HDF5 group
+    names being the 4-bit binary representation of those IDs
+    (BEAM0000..BEAM1011). Beams 4, 7, 9, 10 don't exist. Verified
+    against real L2A + L4A granules.
+    ATL09 uses profile_1/_2/_3 but this function is only called when
+    the caller expects gtxx or BEAMxxxx, so profile_* is handled at
+    the SELECTOR_MAP level (hardcoded path) rather than here.
     """
     icesat2_beams = ["gt1l", "gt1r", "gt2l", "gt2r", "gt3l", "gt3r"]
     for beam in icesat2_beams:
         if beam in h5file:
             return beam
-    gedi_beams = [f"BEAM{n:04d}" for n in range(12)]
+    gedi_beams = [
+        "BEAM0000", "BEAM0001", "BEAM0010", "BEAM0011",
+        "BEAM0101", "BEAM0110", "BEAM1000", "BEAM1011",
+    ]
     for beam in gedi_beams:
         if beam in h5file:
             return beam

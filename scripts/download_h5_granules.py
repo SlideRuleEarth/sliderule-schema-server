@@ -85,13 +85,25 @@ def format_size(size_bytes):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Download sample ICESat-2 v007 granules for field enumeration"
+        description="Download sample ICESat-2 and GEDI granules for field enumeration"
     )
     parser.add_argument(
         "--output-dir", default="./granules",
         help="Directory to save downloaded files (default: ./granules)"
     )
+    parser.add_argument(
+        "--only",
+        help="Comma-separated list of product labels to download "
+             "(e.g. ATL24,GEDI_L2A,GEDI_L4A). Default: every entry in PRODUCTS.",
+    )
     args = parser.parse_args()
+    only = {p.strip() for p in args.only.split(",")} if args.only else None
+    if only:
+        unknown = only - {label for label, *_ in PRODUCTS}
+        if unknown:
+            print(f"Unknown product labels in --only: {sorted(unknown)}")
+            print(f"Valid labels: {[label for label, *_ in PRODUCTS]}")
+            sys.exit(2)
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -99,6 +111,8 @@ def main():
     earthaccess.login()
 
     for label, short_name, version, temporal in PRODUCTS:
+        if only and label not in only:
+            continue
         print(f"\nSearching for {label} ({short_name} v{version}, {SEARCH_COUNT} candidates)...")
 
         results = earthaccess.search_data(

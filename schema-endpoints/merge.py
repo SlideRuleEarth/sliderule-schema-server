@@ -63,6 +63,7 @@ AUTHORED_COPIES = [
     ("schema.json",            "source/schema.json"),
     ("errors/not-found.json",  "errors/not-found.json"),
     ("icesat2/fields.json",    "source/schema/icesat2/fields.json"),
+    ("gedi/fields.json",       "source/schema/gedi/fields.json"),
 ]
 
 # (generated-relative source directory, merged-relative destination directory)
@@ -71,6 +72,7 @@ AUTHORED_COPIES = [
 GENERATED_COPIES = [
     ("icesat2/fields",  "source/schema/icesat2/fields"),
     ("icesat2/output",  "source/schema/icesat2/output"),
+    ("gedi/fields",     "source/schema/gedi/fields"),
     ("gedi/output",     "source/schema/gedi/output"),
 ]
 
@@ -168,10 +170,7 @@ def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
         # Without this, an agent walking the schema has to *know* the
         # suffix convention; with it, the mapping is data, not lore.
         # Only inject when the selector URL actually resolves to a
-        # publishable file — GEDI, for example, has an `anc_fields`
-        # param but no enumerated fields index, so there's nothing to
-        # link to and we leave the param untouched rather than pointing
-        # agents at a 404.
+        # publishable file.
         if group_name == "field_selectors":
             for pname, pdata in params_out.items():
                 if pname.endswith("_fields"):
@@ -180,6 +179,23 @@ def merge_domain(domain: str, root: Path, merged_root: Path) -> None:
                     if _publishable(selector_url, root):
                         pdata["selector"] = selector
                         pdata["selector_url"] = selector_url
+        # For any group that carries object-typed params with a nested
+        # `fields.anc_fields` (e.g. algorithms.atl24), wire that nested
+        # anc_fields to its corresponding selector too. The algo's own
+        # name is the selector. Use a fresh copy of `fields` to avoid
+        # mutating the shared gen_params reference held by merge_param.
+        for pname, pdata in params_out.items():
+            nested = pdata.get("fields")
+            if not isinstance(nested, dict) or "anc_fields" not in nested:
+                continue
+            selector_url = f"/source/schema/{domain}/fields/{pname}.json"
+            if not _publishable(selector_url, root):
+                continue
+            fresh_fields = {k: dict(v) if isinstance(v, dict) else v
+                            for k, v in nested.items()}
+            fresh_fields["anc_fields"]["selector"] = pname
+            fresh_fields["anc_fields"]["selector_url"] = selector_url
+            pdata["fields"] = fresh_fields
         group_out = {k: v for k, v in group_meta.items() if k != "params"}
         group_out["params"] = params_out
         groups_out[group_name] = group_out
@@ -394,14 +410,24 @@ def validate_advertised_urls(root: Path) -> None:
 
 def validate_field_selectors_bijection(root: Path) -> None:
     """Every selector in authored/<domain>/fields.json must have a
-    corresponding `<name>_fields` param in that domain's
-    field_selectors group, and vice versa.
+    corresponding field-selector param, and every field-selector param
+    must have a selector.
+
+    Two param shapes count as field selectors:
+
+      1. A top-level `<name>_fields` param in the field_selectors group
+         (e.g. atl08_fields). The stem is the selector name.
+
+      2. A nested `<algo>.fields.anc_fields` under an object-typed param
+         in generated/<domain>/params.json (e.g. atl24.fields.anc_fields
+         under the atl24 algorithm). The algo's own name is the
+         selector reference.
 
     merge_domain and enrich_fields_index inject cross-reference fields
     that assume this bijection holds. Checking it here — pre-flight,
     before merged/ is touched — turns a silent drift (a selector added
-    without its request param, or a `_fields` param added without its
-    selector file) into a clear, actionable error.
+    without its request param, or a field-selector param added without
+    its selector file) into a clear, actionable error.
     """
     for listing_path in sorted((root / "authored").glob("*/fields.json")):
         domain = listing_path.parent.name
@@ -411,19 +437,34 @@ def validate_field_selectors_bijection(root: Path) -> None:
         if not structure_path.exists():
             continue
         fs_group = load(structure_path).get("groups", {}).get("field_selectors")
-        if not fs_group:
-            continue
 
         selectors = {
             s["name"]
             for s in load(listing_path).get("selectors", [])
             if s.get("name")
         }
-        param_stems = {
-            p[: -len("_fields")]
-            for p in fs_group.get("params", [])
-            if p.endswith("_fields")
-        }
+
+        # Shape 1: top-level <name>_fields params in field_selectors group.
+        param_stems = set()
+        if fs_group:
+            param_stems = {
+                p[: -len("_fields")]
+                for p in fs_group.get("params", [])
+                if p.endswith("_fields")
+            }
+
+        # Shape 2: nested <algo>.fields.anc_fields owners — the algo
+        # name itself is the selector reference. Read from the generated
+        # params.json since `fields` sub-keys live on the generated
+        # param definition, not the authored structure.
+        gen_path = root / "generated" / domain / "params.json"
+        if gen_path.exists():
+            gen_params = load(gen_path).get("params", {})
+            for pname, pdata in gen_params.items():
+                if isinstance(pdata, dict):
+                    nested = pdata.get("fields") or {}
+                    if "anc_fields" in nested:
+                        param_stems.add(pname)
 
         missing_params = sorted(selectors - param_stems)
         missing_selectors = sorted(param_stems - selectors)
@@ -501,26 +542,46 @@ def stage_generated(root: Path, merged_root: Path) -> None:
             shutil.copyfile(src, dst_dir / src.name)
 
 
-def enrich_fields_index(merged_root: Path, domain: str) -> None:
+def enrich_fields_index(root: Path, merged_root: Path, domain: str) -> None:
     """Add `param` to each selector entry in merged/.../fields.json.
 
-    The authored fields.json lists selectors by bare name (`atl08`),
-    while the corresponding request parameter in the domain schema's
-    field_selectors group is `<name>_fields` (`atl08_fields`). Injecting
-    `param` on each selector exposes that mapping to anyone walking
-    the fields index, so they don't have to know the suffix convention.
-    The inverse link (selector + selector_url on each param) is added
-    in merge_domain; the two injections together make the relationship
-    navigable in both directions.
+    The authored fields.json lists selectors by bare name (`atl08`);
+    the corresponding request parameter lives in one of two shapes in
+    the domain schema:
+
+      * Top-level `<name>_fields` under field_selectors (e.g. atl08 →
+        atl08_fields). Injected as `param: "<name>_fields"`.
+      * Nested `<name>.fields.anc_fields` under some other group, e.g.
+        the atl24 algorithm. Injected as the dotted path
+        `param: "<name>.fields.anc_fields"` so a consumer following
+        the link can find the actual knob.
+
+    Without the `param` field, walkers of the fields index would have
+    to know the naming convention. The inverse link (selector +
+    selector_url on each param) is added in merge_domain; the two
+    injections together make the relationship navigable in both
+    directions. validate_field_selectors_bijection guarantees each
+    selector corresponds to exactly one of the two shapes.
     """
     path = merged_root / "source" / "schema" / domain / "fields.json"
     if not path.exists():
         return
+    gen_path = root / "generated" / domain / "params.json"
+    gen_params = load(gen_path).get("params", {}) if gen_path.exists() else {}
+
     data = load(path)
     for sel in data.get("selectors", []):
         name = sel.get("name")
-        if name:
+        if not name:
+            continue
+        if f"{name}_fields" in gen_params:
             sel["param"] = f"{name}_fields"
+        elif (
+            isinstance(gen_params.get(name), dict)
+            and isinstance(gen_params[name].get("fields"), dict)
+            and "anc_fields" in gen_params[name]["fields"]
+        ):
+            sel["param"] = f"{name}.fields.anc_fields"
     dump(path, data)
 
 
@@ -560,7 +621,7 @@ def main() -> int:
     stage_generated(root, merged_root)
 
     for domain in DOMAINS:
-        enrich_fields_index(merged_root, domain)
+        enrich_fields_index(root, merged_root, domain)
 
     print(f"wrote merged/ with {sum(1 for _ in merged_root.rglob('*') if _.is_file())} files")
     return 0

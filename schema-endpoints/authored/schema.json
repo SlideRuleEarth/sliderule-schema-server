@@ -17,7 +17,8 @@
       "description": "GEDI full-waveform lidar parameters.",
       "inherits": "core",
       "param_count": 12,
-      "schema_url": "/source/schema/gedi.json"
+      "schema_url": "/source/schema/gedi.json",
+      "fields_url": "/source/schema/gedi/fields.json"
     }
   },
   "apis": {
