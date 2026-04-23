@@ -1,0 +1,15 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "What HDF5 fields can I request via `atl08_fields`?",
+  "files": [],
+  "expected_behavior": [
+    "Recognizes this as a two-hop lookup: selector listing, then per-selector field list.",
+    "Fetches /source/schema/icesat2/fields.json (the selectors listing) — located via domains.icesat2.fields_url from the index.",
+    "Finds the selector entry named `atl08` in the `selectors` list (not `atl08_fields` — the request param name and the selector name differ by suffix).",
+    "Follows that entry's `url` field to fetch /source/schema/icesat2/fields/atl08.json.",
+    "Enumerates the HDF5 fields that selector exposes, using the schema's own field list as the source of truth.",
+    "Reports type + unit metadata when asked or when obviously relevant.",
+    "Cites both URLs (the selectors listing and the per-selector file).",
+    "Does NOT hallucinate field names — every field mentioned must appear in the fetched JSON."
+  ]
+}

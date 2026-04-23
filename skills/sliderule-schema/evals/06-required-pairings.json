@@ -1,0 +1,15 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "I want to use `atl08_class` to filter for ground photons. What other parameters do I need to set for this to work correctly?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema/icesat2.json.",
+    "Locates `atl08_class` under groups.photon_filtering.params.",
+    "Reads the `required_pairings` field on `atl08_class` — NOT just the description.",
+    "Surfaces BOTH required pairings explicitly: `cnf` must be set to 0 (no native filtering), `srt` must be set to 0 (land).",
+    "Treats these as requirements, not suggestions — per SKILL.md section 4 ('These are NOT suggestions').",
+    "Optionally mentions `implicit_behavior` if an ATL08 ancillary field is also requested (auto-classification, unclassified-photon filtering).",
+    "Cites the schema URL.",
+    "Does NOT invent additional required params beyond what the schema declares — the coupling set is exactly cnf + srt."
+  ]
+}

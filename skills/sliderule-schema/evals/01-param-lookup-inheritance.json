@@ -1,0 +1,15 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "What does the `cnf` parameter do, and which APIs does it apply to?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema.json (the index) OR jumps directly to the icesat2 domain schema — either is acceptable, but must fetch something.",
+    "Fetches /source/schema/icesat2.json.",
+    "Locates `cnf` under groups.photon_filtering.params — NOT under core (this is the key failure mode: the inheritance framing invites looking in core first).",
+    "Explains that `cnf` controls photon confidence-level selection for ATL03 photons.",
+    "Lists the APIs the param applies to, sourced from groups.photon_filtering.applies_to.",
+    "Surfaces the coupling with `srt` (depends_on) — NOT as trivia but as required setup context if the user will send a request.",
+    "Cites the schema URL in the response so the user can follow up.",
+    "Does NOT answer from training data without fetching."
+  ]
+}
