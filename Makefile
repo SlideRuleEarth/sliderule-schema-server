@@ -29,7 +29,8 @@ SRC_DIR   = $(ROOT)/schema-endpoints
         deploy-to-testsliderule deploy-to-slideruleearth \
         destroy-testsliderule destroy-slideruleearth \
         live-update-testsliderule live-update-slideruleearth \
-        smoketest-testsliderule smoketest-slideruleearth
+        smoketest-testsliderule smoketest-slideruleearth \
+        requests requests-testsliderule requests-slideruleearth
 
 help: ## That's me!
 	@printf "\033[37m%-40s\033[0m %s\n" "#-----------------------------------------------------------------------------------------"
@@ -125,6 +126,30 @@ package-skill-schema: ## Package skills/sliderule-schema/ into a .skill zip
 
 package-skills: package-skill-schema ## Package all skills
 
+# ---- Observability --------------------------------------------------------------------------------
+
+# CloudFront's Requests metric is published per-distribution with
+# Region=Global in us-east-1, so we resolve the distribution ID by
+# domain alias and query CloudWatch directly. Inline lookup (rather
+# than $(DISTRIBUTION_ID) from the top of the Makefile) keeps the base
+# target usable when called directly without a wrapper.
+requests: ## Show CloudFront request count (CloudWatch metric, 1-hour buckets, last 24h) (requires DOMAIN)
+	@test -n "$(DOMAIN)" || (echo "❌ DOMAIN is not set"; exit 1)
+	@DIST_ID=$$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[0]=='$(DOMAIN)'].Id" --output text 2>/dev/null); \
+	test -n "$$DIST_ID" || { echo "❌ No CloudFront distribution found for $(DOMAIN)"; exit 1; }; \
+	aws cloudwatch get-metric-statistics \
+		--region us-east-1 \
+		--namespace AWS/CloudFront \
+		--metric-name Requests \
+		--dimensions Name=DistributionId,Value=$$DIST_ID Name=Region,Value=Global \
+		--start-time "$$(date -u -v-24H +%Y-%m-%dT%H:%M:%S)" \
+		--end-time "$$(date -u +%Y-%m-%dT%H:%M:%S)" \
+		--period 3600 \
+		--statistics Sum \
+		--output text \
+		--query 'sort_by(Datapoints,&Timestamp)[].[Timestamp,Sum]' \
+		| python3 $(ROOT)/scripts/utc_to_local.py
+
 # ---- Per-environment wrappers (mirror sliderule-web-client conventions) ---------------------------
 
 deploy-to-testsliderule: ## Create infra + upload content at schema.testsliderule.org
@@ -136,6 +161,9 @@ live-update-testsliderule: ## Build + upload + invalidate at schema.testsliderul
 
 smoketest-testsliderule: ## Smoketest against schema.testsliderule.org
 	make smoketest DOMAIN=schema.testsliderule.org
+
+requests-testsliderule: ## Show CloudFront request count for schema.testsliderule.org (last 24h)
+	make requests DOMAIN=schema.testsliderule.org
 
 destroy-testsliderule: ## Tear down schema.testsliderule.org infrastructure
 	make terraform-destroy DOMAIN=schema.testsliderule.org S3_BUCKET=sliderule-schema-test DOMAIN_APEX=testsliderule.org
@@ -149,6 +177,9 @@ live-update-slideruleearth: ## Build + upload + invalidate at schema.slideruleea
 
 smoketest-slideruleearth: ## Smoketest against schema.slideruleearth.io
 	make smoketest DOMAIN=schema.slideruleearth.io
+
+requests-slideruleearth: ## Show CloudFront request count for schema.slideruleearth.io (last 24h)
+	make requests DOMAIN=schema.slideruleearth.io
 
 destroy-slideruleearth: ## Tear down schema.slideruleearth.io infrastructure
 	make terraform-destroy DOMAIN=schema.slideruleearth.io S3_BUCKET=sliderule-schema-prod DOMAIN_APEX=slideruleearth.io
