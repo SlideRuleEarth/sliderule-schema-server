@@ -8,7 +8,7 @@
       ],
       "interaction_detail": "Confidence classification is surface-type-dependent. The same photon receives different confidence scores depending on which surface type (srt) is applied. Changing srt changes which photons survive the cnf filter.",
       "required_pairings": {
-        "with_atl08_class": "Set cnf=0 (no native filtering) to let all ATL08-classified photons through",
+        "with_atl08_class": "Set cnf=0 or lower to let all ATL08-classified photons through. cnf=0 is the docs' recommended value; cnf=-2 (includes TEP candidates) is also valid, per SlideRule's grandmesa_atl03_classification example.",
         "with_atl24": "Set cnf=-1 (all photons) to let all ATL24-classified photons through"
       }
     },
@@ -24,10 +24,10 @@
     },
     "atl08_class": {
       "required_pairings": {
-        "cnf": "Set to 0 (no native filtering)",
-        "srt": "Set to 0 (land)"
+        "cnf": "Set to 0 or lower to disable native ATL03 confidence filtering. The docs recommend cnf=0 (no native filtering); cnf=-2 is valid too and includes TEP candidates, per SlideRule's grandmesa_atl03_classification example. A higher value filters photons before ATL08 classification can run, discarding photons ATL08 might otherwise classify.",
+        "srt": "Set to 0 (land). ATL08 classification operates on land-surface data only."
       },
-      "implicit_behavior": "When atl08_class is set and an ATL08 ancillary field is requested, ATL08 classifications are automatically enabled with unclassified photons filtered out. If PhoREAL is also enabled, noise photons are auto-filtered. Manual specification of atl08_class takes precedence."
+      "implicit_behavior": "Setting atl08_class activates the ATL08 classifier on its own; the `atl08_class` column appears in the output whether or not atl08_fields is also requested. atl08_fields (ATL08 land_segments fields) is optional and requires either atl08_class or PhoREAL to be active — it does not itself activate the classifier."
     },
     "res": {
       "interacts_with": [
@@ -60,7 +60,7 @@
       }
     },
     "atl08_fields": {
-      "implicit_behavior": "Adding an atl08_field automatically enables ATL08 classification with unclassified photons filtered out. If PhoREAL is also active, noise photons are auto-filtered. Manual atl08_class specification takes precedence.",
+      "implicit_behavior": "atl08_fields requires either atl08_class or PhoREAL to already be active — setting it alone has no effect. It does NOT itself activate the ATL08 classifier; it appends ATL08 land_segments fields to output whose photons are already being classified by one of those other mechanisms.",
       "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead."
     }
   }
