@@ -1,0 +1,14 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "My atl24x result has no `ellipse_h` column. What setting do I need to change?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema/icesat2/output/atl24x.json.",
+    "Locates the `ellipse_h` entry in the columns list.",
+    "Observes that `ellipse_h` carries a `condition` field of `!atl24.compact` (note the leading `!` — this is a negated condition).",
+    "Correctly interprets the `!` prefix: the column appears when `atl24.compact` is FALSE or absent, NOT when it is TRUE.",
+    "Tells the user to disable (or simply not enable) atl24 compact mode in their request parameters.",
+    "Cites the schema URL.",
+    "Does NOT advise the user to 'enable' or 'turn on' atl24.compact — that would suppress the column, the opposite of what they want."
+  ]
+}

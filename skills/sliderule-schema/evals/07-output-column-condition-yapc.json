@@ -1,0 +1,14 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "My atl03x response is missing the yapc_score column. What's going on?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema/icesat2/output/atl03x.json.",
+    "Locates the `yapc_score` entry in the columns list.",
+    "Observes that `yapc_score` carries a `condition` field of `stages.yapc`.",
+    "Explains that columns with a `condition` only appear in the DataFrame when the named processing stage is active in the request.",
+    "Tells the user concretely how to get the column: enable YAPC in the request parameters (e.g. add `yapc={}`).",
+    "Cites the schema URL.",
+    "Does NOT speculate about server bugs, data availability, or silently missing granules — the `condition` is the authoritative explanation."
+  ]
+}

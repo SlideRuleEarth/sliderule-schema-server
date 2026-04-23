@@ -1,14 +1,15 @@
 {
   "skills": ["sliderule-schema"],
-  "query": "Why doesn't my atl06x result have a `relief` column?",
+  "query": "Why doesn't my atl06x result have an `atl08_class` column?",
   "files": [],
   "expected_behavior": [
     "Fetches /source/schema/icesat2/output/atl06x.json.",
-    "Locates the `relief` entry in the columns list.",
-    "Observes that `relief` carries a `condition` field (e.g. `stages.phoreal`).",
-    "Explains that columns with a `condition` only appear in the DataFrame when the named processing stage is active in the request.",
-    "Tells the user concretely how to get the column: enable PhoREAL in the request parameters (e.g. add `phoreal={}`).",
-    "Cites the schema URL.",
-    "Does NOT speculate about server bugs, data availability, or silently missing granules — the `condition` is the authoritative explanation."
+    "Observes that `atl08_class` is not present in atl06x's columns list at all.",
+    "Fetches /source/schema/icesat2/output/atl03x.json to check whether `atl08_class` belongs to a different API.",
+    "Locates `atl08_class` in atl03x's columns with a `condition` field of `stages.atl08`.",
+    "Explains that `atl08_class` is an atl03x output (photon-level ATL08 classification), not atl06x, and on atl03x it only appears when the atl08 processing stage is active.",
+    "Tells the user concretely how to get the column: switch to atl03x and enable the atl08 stage by setting the `atl08_class` request parameter (which can be looked up under `photon_filtering` in /source/schema/icesat2.json). Note the parameter and the column share a name.",
+    "Cites both schema URLs.",
+    "Does NOT speculate about server bugs, data availability, or silently missing granules — the schema is the authoritative explanation."
   ]
 }
