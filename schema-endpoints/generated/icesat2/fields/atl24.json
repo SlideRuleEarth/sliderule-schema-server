@@ -1,0 +1,182 @@
+{
+  "selector": "atl24",
+  "hdf5_subgroup": "gtxx",
+  "description": "Bathymetry-classified photon fields from ATL24.",
+  "field_count": 19,
+  "fields": [
+    {
+      "name": "class_ph",
+      "hdf5_path": "/gt1l/class_ph",
+      "type": "int8",
+      "shape": null,
+      "description": "Photon classification",
+      "unit": "scalar",
+      "source": "ATL03"
+    },
+    {
+      "name": "confidence",
+      "hdf5_path": "/gt1l/confidence",
+      "type": "float64",
+      "shape": null,
+      "description": "Ensemble confidence",
+      "unit": "scalar",
+      "source": "ATL03"
+    },
+    {
+      "name": "delta_time",
+      "hdf5_path": "/gt1l/delta_time",
+      "type": "float64",
+      "shape": null,
+      "description": "Elapsed GPS seconds",
+      "unit": "seconds since 2018-01-01",
+      "source": "ATL03"
+    },
+    {
+      "name": "ellipse_h",
+      "hdf5_path": "/gt1l/ellipse_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Photon WGS84 height",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "index_ph",
+      "hdf5_path": "/gt1l/index_ph",
+      "type": "int32",
+      "shape": null,
+      "description": "Photon index",
+      "unit": "scalar",
+      "source": "ATL03"
+    },
+    {
+      "name": "index_seg",
+      "hdf5_path": "/gt1l/index_seg",
+      "type": "int32",
+      "shape": null,
+      "description": "Segment index",
+      "unit": "scalar",
+      "source": "ATL03"
+    },
+    {
+      "name": "invalid_kd",
+      "hdf5_path": "/gt1l/invalid_kd",
+      "type": "uint8",
+      "shape": null,
+      "description": "Invalid Kd",
+      "unit": "boolean",
+      "source": "ATL03"
+    },
+    {
+      "name": "invalid_wind_speed",
+      "hdf5_path": "/gt1l/invalid_wind_speed",
+      "type": "uint8",
+      "shape": null,
+      "description": "Invalid wind speed",
+      "unit": "boolean",
+      "source": "ATL03"
+    },
+    {
+      "name": "lat_ph",
+      "hdf5_path": "/gt1l/lat_ph",
+      "type": "float64",
+      "shape": null,
+      "description": "Latitude",
+      "standard_name": "latitude",
+      "unit": "degrees_north",
+      "source": "ATL03"
+    },
+    {
+      "name": "lon_ph",
+      "hdf5_path": "/gt1l/lon_ph",
+      "type": "float64",
+      "shape": null,
+      "description": "Longitude",
+      "standard_name": "longitude",
+      "unit": "degrees_east",
+      "source": "ATL03"
+    },
+    {
+      "name": "low_confidence_flag",
+      "hdf5_path": "/gt1l/low_confidence_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "Low confidence bathymetry flag",
+      "unit": "boolean",
+      "source": "ATL03"
+    },
+    {
+      "name": "night_flag",
+      "hdf5_path": "/gt1l/night_flag",
+      "type": "uint8",
+      "shape": null,
+      "description": "Night flag",
+      "unit": "boolean",
+      "source": "ATL03"
+    },
+    {
+      "name": "ortho_h",
+      "hdf5_path": "/gt1l/ortho_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Orthometric height",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "sensor_depth_exceeded",
+      "hdf5_path": "/gt1l/sensor_depth_exceeded",
+      "type": "uint8",
+      "shape": null,
+      "description": "Sensor depth exceeded",
+      "unit": "boolean",
+      "source": "ATL03"
+    },
+    {
+      "name": "sigma_thu",
+      "hdf5_path": "/gt1l/sigma_thu",
+      "type": "float32",
+      "shape": null,
+      "description": "Total horizontal uncertainty",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "sigma_tvu",
+      "hdf5_path": "/gt1l/sigma_tvu",
+      "type": "float32",
+      "shape": null,
+      "description": "Total vertical uncertainty",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "surface_h",
+      "hdf5_path": "/gt1l/surface_h",
+      "type": "float32",
+      "shape": null,
+      "description": "Sea surface orthometric height",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "x_atc",
+      "hdf5_path": "/gt1l/x_atc",
+      "type": "float64",
+      "shape": null,
+      "description": "Distance from equator crossing",
+      "unit": "meters",
+      "source": "ATL03"
+    },
+    {
+      "name": "y_atc",
+      "hdf5_path": "/gt1l/y_atc",
+      "type": "float32",
+      "shape": null,
+      "description": "Distance off RGT",
+      "unit": "meters",
+      "source": "ATL03"
+    }
+  ],
+  "source_granule": "ATL24_20220601001150_10671513_006_01_001_01.h5"
+}

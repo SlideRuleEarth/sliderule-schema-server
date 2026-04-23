@@ -57,6 +57,13 @@
       "description": "Inland water surface fields from ATL13.",
       "field_count": 79,
       "param": "atl13_fields"
+    },
+    {
+      "name": "atl24",
+      "url": "/source/schema/icesat2/fields/atl24.json",
+      "description": "Bathymetry-classified photon fields from ATL24 (per-photon, gtxx beam group).",
+      "field_count": 19,
+      "param": "atl24.fields.anc_fields"
     }
   ]
 }

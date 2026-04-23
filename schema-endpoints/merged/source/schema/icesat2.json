@@ -460,7 +460,9 @@
             "anc_fields": {
               "default": [],
               "type": "array<string>",
-              "description": "Ancillary fields to include from ATL24 bathymetry data."
+              "description": "Ancillary fields to include from ATL24 bathymetry data.",
+              "selector": "atl24",
+              "selector_url": "/source/schema/icesat2/fields/atl24.json"
             },
             "class_ph": {
               "default": [
@@ -577,7 +579,9 @@
             "anc_fields": {
               "default": [],
               "type": "array<string>",
-              "description": "Ancillary fields to include from ATL13 water body data."
+              "description": "Ancillary fields to include from ATL13 water body data.",
+              "selector": "atl13",
+              "selector_url": "/source/schema/icesat2/fields/atl13.json"
             }
           },
           "output_effect": "replaces"

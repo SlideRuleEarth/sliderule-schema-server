@@ -177,7 +177,9 @@
         "anc_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Additional ancillary fields to include from the GEDI granules."
+          "description": "Additional ancillary fields to include from the GEDI granules.",
+          "selector": "anc",
+          "selector_url": "/source/schema/gedi/fields/anc.json"
         }
       }
     }

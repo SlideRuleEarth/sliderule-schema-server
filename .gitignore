@@ -44,6 +44,13 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# ---- HDF5 enumeration working dirs -----------------------------------------
+# download_h5_granules.py defaults to ./granules/; enumerate_h5_fields.py
+# defaults to ./schema_fields/. Both are local scratch — the publishable
+# artifacts are copied into schema-endpoints/generated/ before commit.
+/granules/
+/schema_fields/
+
 # ---- Claude skill archives -------------------------------------------------
 # Rebuilt on demand by `make package-skill-*`; the on-disk skill
 # directories (skills/<name>/) are the source of truth.
