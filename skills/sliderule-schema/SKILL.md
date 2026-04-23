@@ -130,10 +130,12 @@ non-JSON body) go to stderr with exit code 2.
    | list of domains / list of APIs        | the index itself (`domains`, `apis` keys)           |
 
 3. **Respect inheritance.** `icesat2` and `gedi` both declare
-   `"inherits": "core"`. Questions about `cnf`, `srt`, `poly`, `t0/t1`,
-   etc. often live in `/source/schema/core.json`, not the mission
-   domain. If a param isn't in the mission-domain document, look in
-   core.
+   `"inherits": "core"`. Resolve a param by searching the mission
+   domain first, then `/source/schema/core.json`. Mission domains
+   may override core groups (e.g. `icesat2` redefines
+   `raster_sampling.samples`). For the exhaustive list of
+   core-owned params and current cross-domain overrides, see
+   [reference/core-params.md](reference/core-params.md).
 
 4. **Read couplings carefully.** A param may carry `depends_on`,
    `interacts_with`, `required_pairings`, `interaction_detail`, or

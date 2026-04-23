@@ -1,0 +1,14 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "Why doesn't my atl06x result have a `relief` column?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema/icesat2/output/atl06x.json.",
+    "Locates the `relief` entry in the columns list.",
+    "Observes that `relief` carries a `condition` field (e.g. `stages.phoreal`).",
+    "Explains that columns with a `condition` only appear in the DataFrame when the named processing stage is active in the request.",
+    "Tells the user concretely how to get the column: enable PhoREAL in the request parameters (e.g. add `phoreal={}`).",
+    "Cites the schema URL.",
+    "Does NOT speculate about server bugs, data availability, or silently missing granules — the `condition` is the authoritative explanation."
+  ]
+}

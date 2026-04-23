@@ -1,0 +1,15 @@
+{
+  "skills": ["sliderule-schema"],
+  "query": "I want to run atl06x at 20 meter resolution — which parameter sets that, and is it the default?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches /source/schema/icesat2.json (directly or via the index).",
+    "Locates `res` under groups.segment_control.params.",
+    "Explains `res` controls along-track posting resolution — the distance between successive extent centers.",
+    "Answers the 'is it the default' question concretely: YES, default is 20.",
+    "Ideally distinguishes `res` (20 m default — posting) from `len` (40 m default — extent length / fit window), since users commonly conflate the two.",
+    "Cites the schema URL.",
+    "Does NOT fabricate a param called `resolution` — no such param exists.",
+    "Does NOT steer the user to `raster_sampling.samples` — that's about DEM co-sampling, unrelated to segment resolution."
+  ]
+}

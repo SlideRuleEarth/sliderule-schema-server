@@ -1,0 +1,12 @@
+{
+  "skills": ["sliderule-schema", "sliderule-docsearch", "sliderule-api"],
+  "query": "How do I call atl06x from Python? Show me example code.",
+  "files": [],
+  "expected_behavior": [
+    "Recognizes this is a narrative/how-to question, not a schema-shape question.",
+    "Does NOT primarily use sliderule-schema — schema tells you what params exist, not how to write client code.",
+    "Redirects to sliderule-docsearch (for narrative docs at docs.slideruleearth.io) or sliderule-api (for Processing API call mechanics), per the `Not covered` and `Relationship to other sliderule skills` sections of sliderule-schema's SKILL.md.",
+    "Does NOT invent Python client code by reading schema JSON alone — the schema doesn't describe the client library's calling convention.",
+    "If sliderule-schema is consulted at all, it's secondary — e.g. to enumerate param names, after the primary skill answers the 'how do I call it' question."
+  ]
+}
