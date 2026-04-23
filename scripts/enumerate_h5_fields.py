@@ -330,6 +330,10 @@ def get_granule_size(result):
             if 'Size' in item:
                 return item['Size']
     except (KeyError, TypeError):
+        # Malformed or unexpected metadata shape — fall through to
+        # infinity so this granule sorts last ("unknown size,
+        # deprioritize"). Not worth per-granule stderr noise during
+        # the smallest-granule scan.
         pass
     return float('inf')
 
