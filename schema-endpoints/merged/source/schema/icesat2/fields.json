@@ -6,49 +6,57 @@
       "name": "atl03_ph",
       "url": "/source/schema/icesat2/fields/atl03_ph.json",
       "description": "Per-photon fields from ATL03 heights group.",
-      "field_count": 14
+      "field_count": 14,
+      "param": "atl03_ph_fields"
     },
     {
       "name": "atl03_geo",
       "url": "/source/schema/icesat2/fields/atl03_geo.json",
       "description": "Geolocation fields from ATL03 (per-segment, ~20m rate).",
-      "field_count": 38
+      "field_count": 38,
+      "param": "atl03_geo_fields"
     },
     {
       "name": "atl03_corr",
       "url": "/source/schema/icesat2/fields/atl03_corr.json",
       "description": "Geophysical correction fields from ATL03 (per-segment, ~20m rate).",
-      "field_count": 13
+      "field_count": 13,
+      "param": "atl03_corr_fields"
     },
     {
       "name": "atl03_bckgrd",
       "url": "/source/schema/icesat2/fields/atl03_bckgrd.json",
       "description": "Background photon rate fields from ATL03.",
-      "field_count": 12
+      "field_count": 12,
+      "param": "atl03_bckgrd_fields"
     },
     {
       "name": "atl06",
       "url": "/source/schema/icesat2/fields/atl06.json",
       "description": "Land ice segment fields from ATL06, including sub-groups.",
-      "field_count": 64
+      "field_count": 64,
+      "param": "atl06_fields"
     },
     {
       "name": "atl08",
       "url": "/source/schema/icesat2/fields/atl08.json",
       "description": "Land/vegetation segment fields from ATL08, including sub-groups.",
-      "field_count": 92
+      "field_count": 92,
+      "param": "atl08_fields"
     },
     {
       "name": "atl09",
       "url": "/source/schema/icesat2/fields/atl09.json",
       "description": "Atmospheric fields from ATL09 calibrated backscatter profiles.",
-      "field_count": 75
+      "field_count": 75,
+      "param": "atl09_fields"
     },
     {
       "name": "atl13",
       "url": "/source/schema/icesat2/fields/atl13.json",
       "description": "Inland water surface fields from ATL13.",
-      "field_count": 79
+      "field_count": 79,
+      "param": "atl13_fields"
     }
   ]
 }

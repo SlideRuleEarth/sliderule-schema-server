@@ -599,7 +599,9 @@
           "description": "Per-photon fields from the ATL03 /heights subgroup.",
           "example_values": [
             "ph_id_channel"
-          ]
+          ],
+          "selector": "atl03_ph",
+          "selector_url": "/source/schema/icesat2/fields/atl03_ph.json"
         },
         "atl03_geo_fields": {
           "default": [],
@@ -608,39 +610,53 @@
           "example_values": [
             "ref_azimuth",
             "ref_elev"
-          ]
+          ],
+          "selector": "atl03_geo",
+          "selector_url": "/source/schema/icesat2/fields/atl03_geo.json"
         },
         "atl03_corr_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Geophysical correction fields from the ATL03 /geophys_corr subgroup."
+          "description": "Geophysical correction fields from the ATL03 /geophys_corr subgroup.",
+          "selector": "atl03_corr",
+          "selector_url": "/source/schema/icesat2/fields/atl03_corr.json"
         },
         "atl03_bckgrd_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Background photon rate fields from the ATL03 /bckgrd_atlas subgroup."
+          "description": "Background photon rate fields from the ATL03 /bckgrd_atlas subgroup.",
+          "selector": "atl03_bckgrd",
+          "selector_url": "/source/schema/icesat2/fields/atl03_bckgrd.json"
         },
         "atl06_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Additional fields from ATL06 land-ice height segments."
+          "description": "Additional fields from ATL06 land-ice height segments.",
+          "selector": "atl06",
+          "selector_url": "/source/schema/icesat2/fields/atl06.json"
         },
         "atl08_fields": {
           "default": [],
           "type": "array<string>",
           "description": "Additional fields from ATL08 land-vegetation segments.",
           "implicit_behavior": "Adding an atl08_field automatically enables ATL08 classification with unclassified photons filtered out. If PhoREAL is also active, noise photons are auto-filtered. Manual atl08_class specification takes precedence.",
-          "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead."
+          "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead.",
+          "selector": "atl08",
+          "selector_url": "/source/schema/icesat2/fields/atl08.json"
         },
         "atl09_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Atmospheric fields from ATL09 (cloud cover, atmospheric backscatter)."
+          "description": "Atmospheric fields from ATL09 (cloud cover, atmospheric backscatter).",
+          "selector": "atl09",
+          "selector_url": "/source/schema/icesat2/fields/atl09.json"
         },
         "atl13_fields": {
           "default": [],
           "type": "array<string>",
-          "description": "Additional fields from ATL13 inland water surface segments."
+          "description": "Additional fields from ATL13 inland water surface segments.",
+          "selector": "atl13",
+          "selector_url": "/source/schema/icesat2/fields/atl13.json"
         }
       }
     },
