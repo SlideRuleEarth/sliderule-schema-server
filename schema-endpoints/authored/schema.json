@@ -9,7 +9,7 @@
     "icesat2": {
       "description": "ICESat-2 photon-counting laser altimetry parameters.",
       "inherits": "core",
-      "param_count": 33,
+      "param_count": 32,
       "schema_url": "/source/schema/icesat2.json",
       "fields_url": "/source/schema/icesat2/fields.json"
     },
