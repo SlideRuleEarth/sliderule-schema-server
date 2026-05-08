@@ -145,7 +145,7 @@ exactly as documented above — no envelope.
    | User asks about…                      | Fetch…                                              |
    | ------------------------------------- | --------------------------------------------------- |
    | a parameter name (`cnf`, `srt`, …)    | the domain's `schema_url`; search `groups.*.params` |
-   | which parameters apply to `<api>`     | the domain's `schema_url`; filter groups by `applies_to` contains `<api>` |
+   | which parameters apply to `<api>`     | the domain's `schema_url`; for each group whose `applies_to` contains `<api>`, then for each param check its own `applies_to` if present (a per-param `applies_to` overrides the group's, and may be a strict subset — e.g. `spots` is in `beam_track_selection` but only applies to `atl03x` — or, for `field_selectors`, may add APIs the group doesn't list, e.g. `atl09_fields` extends to `atl13x`/`atl24x`). A request that sets a param on an API not in that param's `applies_to` is silently ignored by SlideRule. |
    | inheritance / shared parameters       | `/source/schema/core.json` (all mission domains inherit core) |
    | what columns `<api>` returns          | `apis.<api>.output_schema_url`                      |
    | HDF5 fields under `<selector>`        | `domains.icesat2.fields_url`, then follow `selectors[].url` |
