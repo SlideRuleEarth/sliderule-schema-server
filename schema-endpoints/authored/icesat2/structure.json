@@ -103,20 +103,6 @@
         "atl13_fields"
       ]
     },
-    "raster_sampling": {
-      "label": "Raster Co-Sampling",
-      "description": "Sample external raster datasets (DEMs, land cover, spectral indices) at each output point's geolocation. Results are added as extra columns with user-specified key as prefix.",
-      "applies_to": [
-        "atl03x",
-        "atl06x",
-        "atl08x",
-        "atl13x",
-        "atl24x"
-      ],
-      "params": [
-        "samples"
-      ]
-    },
     "data_source": {
       "label": "Data Source",
       "description": "Identifies the source dataset.",
