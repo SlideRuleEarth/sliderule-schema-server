@@ -1,6 +1,12 @@
 ---
 name: sliderule-schema
 description: Look up SlideRule request parameters, output-column schemas, and HDF5 field selectors from the live schema distribution. Use for questions like "what does the `cnf` parameter do?", "what columns does atl06x return?", "what fields can I request via `atl08_fields`?", "which parameters apply to atl13x?". Fetches machine-readable JSON that definitively describes the server's API surface. Use `sliderule-docsearch` instead for narrative documentation ("how do I...", "what is...") and `nsidc-reference` for ICESat-2/GEDI science theory and ATBDs.
+compatibility: >
+  Requires Python 3.8+, the `requests` package, and network access to
+  schema.testsliderule.org.
+metadata:
+  author: cugarteblair
+  version: "1.0"
 ---
 
 # sliderule-schema
@@ -116,6 +122,17 @@ The skill prints the fetched JSON, 2-space indented, to stdout —
 byte-for-byte the distribution's response. Errors (network, non-200,
 non-JSON body) go to stderr with exit code 2.
 
+**Note for Claude.ai sandbox users.** The Code Execution sandbox
+wraps every tool invocation in a JSON envelope of the form
+`{"returncode": <int>, "stdout": <str>, "stderr": <str>}` before
+returning the result to the agent. That envelope is the sandbox's
+tool-result format, not something this script writes. To get to the
+schema JSON, parse the envelope first and then `json.loads(envelope
+["stdout"])`, or use the sandbox's shell-pipe abstraction so stdout
+flows directly into the next process. Outside the sandbox (local
+shell, CI, plain subprocess), `python scripts/schema.py | jq` works
+exactly as documented above — no envelope.
+
 ## Agent instructions
 
 1. **Always fetch the index first** if you don't already know which
@@ -173,7 +190,7 @@ arguments to this skill's fetcher, not bare HTTP targets.
   `required_pairings`, `implicit_behavior`), and `applies_to` per
   endpoint. All facts about what parameters mean come from here.
 - **`sliderule-api`** points here for any schema question — that skill
-  covers only the Processing API (`POST /arrow/{api}`), never the
+  covers only the Processing API (`POST /source/{api}.arrow`), never the
   Schema API.
 - **`sliderule-analysis`** consults this skill after receiving a
   response to resolve column meanings. The response's `sliderule`
