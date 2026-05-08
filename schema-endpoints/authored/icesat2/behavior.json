@@ -51,7 +51,7 @@
       "implicit_behavior": "An empty object {} is sufficient to enable surface fitting. No fields are required."
     },
     "phoreal": {
-      "implicit_behavior": "Enabling PhoREAL uses ATL08 land surface classifications. Noise photons are automatically filtered out when PhoREAL is active."
+      "implicit_behavior": "Dual semantics by API. On atl03x, providing a phoreal block enables the PhoREAL algorithm runner: the per-photon DataFrame is replaced by per-extent vegetation statistics, ATL08 land surface classifications are consulted, and noise photons are filtered out automatically. On atl08x, the phoreal block is read purely as configuration — no algorithm runs. Only use_abs_h (HDF5 path swap for canopy columns), can_quality_filter (gates can_quality_score column + per-segment threshold), and te_quality_filter (gates te_quality_score column + per-segment threshold) are honored on atl08x; the other fields (binsize, geoloc, above_classifier, send_waveform) have no effect there. The block's output_effect: \"replaces\" therefore only applies to atl03x."
     },
     "atl24": {
       "required_pairings": {
@@ -60,8 +60,8 @@
       }
     },
     "atl08_fields": {
-      "implicit_behavior": "atl08_fields requires either atl08_class or PhoREAL to already be active — setting it alone has no effect. It does NOT itself activate the ATL08 classifier; it appends ATL08 land_segments fields to output whose photons are already being classified by one of those other mechanisms.",
-      "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead."
+      "implicit_behavior": "On atl03x, atl08_fields requires either atl08_class or PhoREAL to already be active — setting it alone has no effect. It does NOT itself activate the ATL08 classifier; it appends ATL08 land_segments fields to output whose photons are already being classified by one of those other mechanisms. On atl08x, this prerequisite does not apply: the endpoint reads the native ATL08 land_segments HDF5 group directly, so atl08_fields appends columns unconditionally.",
+      "note": "On atl03x with PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead. On atl08x there is no extent reduction — fields are appended one-to-one with land_segments rows."
     }
   }
 }

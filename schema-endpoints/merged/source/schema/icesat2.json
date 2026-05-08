@@ -332,14 +332,20 @@
     },
     "algorithms": {
       "label": "Processing Algorithms",
-      "description": "Optional algorithm blocks for atl03x. Each enables a different processing mode that either replaces or appends to the base photon DataFrame. Only include the algorithm(s) you need.",
+      "description": "Optional algorithm / configuration blocks. On atl03x, fit / phoreal / yapc enable processing modes that either replace or append to the base photon DataFrame, and atl24 controls integration with the ATL24 bathymetry product. The phoreal block is also read by atl08x as configuration (no algorithm runs there). The atl24 and atl13 blocks are the canonical configurations for atl24x and atl13x respectively. See per-param applies_to for the cross-API surface \u2014 the group's applies_to is the union, not a default.",
       "applies_to": [
-        "atl03x"
+        "atl03x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
       ],
       "params": {
         "fit": {
           "type": "object",
           "description": "ATL06-style iterative surface fitting. Replaces per-photon rows with per-extent fitted elevations. An empty dict {} enables fitting with default segment_control parameters. The fit block can also override maxi, sigma_r_max, and H_min_win independently of the top-level segment_control values.",
+          "applies_to": [
+            "atl03x"
+          ],
           "fields": {
             "maxi": {
               "default": 5,
@@ -362,13 +368,20 @@
         },
         "phoreal": {
           "type": "object",
-          "description": "PhoREAL canopy height algorithm (developed at University of Texas at Austin). Computes vegetation metrics from photon distributions within custom-length extents. Replaces per-photon rows with per-extent vegetation statistics.",
+          "description": "PhoREAL canopy height configuration block (algorithm developed at University of Texas at Austin). On atl03x: runs as an algorithm \u2014 computes vegetation metrics from photon distributions within custom-length extents and replaces per-photon rows with per-extent vegetation statistics. On atl08x: a subset of fields (use_abs_h, can_quality_filter, te_quality_filter) is read as configuration only \u2014 atl08x reads the native ATL08 land_segments product directly and does not run the PhoREAL algorithm. See per-field applies_to for which fields are honored where.",
+          "applies_to": [
+            "atl03x",
+            "atl08x"
+          ],
           "fields": {
             "binsize": {
               "default": 1,
               "type": "number",
               "unit": "meters",
-              "description": "Vertical bin size for the photon height histogram used to compute canopy metrics."
+              "description": "Vertical bin size for the photon height histogram used to compute canopy metrics.",
+              "applies_to": [
+                "atl03x"
+              ]
             },
             "geoloc": {
               "default": "median",
@@ -378,40 +391,67 @@
                 "mean": "Average across all photons in the extent",
                 "median": "Median value across all photons in the extent",
                 "center": "Halfway point calculated from the average of the first and last photon positions"
-              }
+              },
+              "applies_to": [
+                "atl03x"
+              ]
             },
             "use_abs_h": {
               "default": false,
               "type": "boolean",
-              "description": "Use absolute (ellipsoidal) photon heights instead of heights normalized relative to ground."
+              "description": "Use absolute (ellipsoidal) photon/canopy heights instead of heights normalized relative to ground.",
+              "applies_to": [
+                "atl03x",
+                "atl08x"
+              ],
+              "note": "On atl03x: switches PhoREAL from ground-relative photon heights to absolute heights for the histogram and derived metrics. On atl08x: swaps the HDF5 source path for h_canopy / h_max_canopy / h_min_canopy / h_mean_canopy / canopy_h_metrics from the relative variants to the *_abs variants under land_segments/canopy/. The output column names do not change \u2014 only the values do."
             },
             "above_classifier": {
               "default": false,
               "type": "boolean",
-              "description": "Enable the above-ground classifier for canopy/ground separation."
+              "description": "Enable the above-ground classifier for canopy/ground separation.",
+              "applies_to": [
+                "atl03x"
+              ]
             },
             "send_waveform": {
               "default": false,
               "type": "boolean",
-              "description": "Include the binned photon height histogram (waveform) as an array column in the output."
+              "description": "Include the binned photon height histogram (waveform) as an array column in the output.",
+              "applies_to": [
+                "atl03x"
+              ]
             },
             "can_quality_filter": {
               "default": 0,
               "type": "integer",
-              "description": "Canopy quality flag filter threshold. Extents below this quality are excluded."
+              "description": "Canopy quality flag filter threshold. Extents (atl03x) or land_segments (atl08x) below this quality are excluded.",
+              "applies_to": [
+                "atl03x",
+                "atl08x"
+              ],
+              "note": "On atl08x, setting any value also activates reading of /land_segments/canopy/can_quality_score and adds it as the can_quality_score output column."
             },
             "te_quality_filter": {
               "default": 0,
               "type": "integer",
-              "description": "Terrain quality flag filter threshold. Extents below this quality are excluded."
+              "description": "Terrain quality flag filter threshold. Extents (atl03x) or land_segments (atl08x) below this quality are excluded.",
+              "applies_to": [
+                "atl03x",
+                "atl08x"
+              ],
+              "note": "On atl08x, setting any value also activates reading of /land_segments/terrain/te_quality_score and adds it as the te_quality_score output column."
             }
           },
           "output_effect": "replaces",
-          "implicit_behavior": "Enabling PhoREAL uses ATL08 land surface classifications. Noise photons are automatically filtered out when PhoREAL is active."
+          "implicit_behavior": "Dual semantics by API. On atl03x, providing a phoreal block enables the PhoREAL algorithm runner: the per-photon DataFrame is replaced by per-extent vegetation statistics, ATL08 land surface classifications are consulted, and noise photons are filtered out automatically. On atl08x, the phoreal block is read purely as configuration \u2014 no algorithm runs. Only use_abs_h (HDF5 path swap for canopy columns), can_quality_filter (gates can_quality_score column + per-segment threshold), and te_quality_filter (gates te_quality_score column + per-segment threshold) are honored on atl08x; the other fields (binsize, geoloc, above_classifier, send_waveform) have no effect there. The block's output_effect: \"replaces\" therefore only applies to atl03x."
         },
         "yapc": {
           "type": "object",
           "description": "Yet Another Photon Classifier. Adds a yapc_score column (0-255) to each photon based on local photon density analysis using k-nearest-neighbors.",
+          "applies_to": [
+            "atl03x"
+          ],
           "fields": {
             "score": {
               "default": 0,
@@ -455,7 +495,11 @@
         },
         "atl24": {
           "type": "object",
-          "description": "Bathymetry photon classification. Runs an ensemble of three classifiers (Median Filter, QTREES, Coastnet) on photon data to identify sea surface, bathymetry, and unclassified returns.",
+          "description": "Bathymetry photon classification block. On atl24x: the canonical configuration for the endpoint \u2014 controls which classified photon types are returned plus quality filters. On atl03x: enables ATL24 integration via the SurfaceBlanket runner \u2014 class_ph and confidence_threshold filter ATL24-classified photons that get joined back into the ATL03 photon DataFrame; the other fields (compact, night, low_confidence, sensor_depth_exceeded, invalid_kd, invalid_wind_speed, anc_fields) are honored by atl24x only.",
+          "applies_to": [
+            "atl03x",
+            "atl24x"
+          ],
           "fields": {
             "anc_fields": {
               "default": [],
@@ -557,6 +601,9 @@
         "atl13": {
           "type": "object",
           "description": "Inland water body configuration for the atl13x API. Identifies the target water body by name, reference ID, or coordinate.",
+          "applies_to": [
+            "atl13x"
+          ],
           "fields": {
             "name": {
               "default": "",
@@ -590,11 +637,13 @@
     },
     "field_selectors": {
       "label": "Ancillary Field Selection",
-      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size.",
+      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size. Each selector has its own applies_to \u2014 the group's applies_to is the union, not a default. A selector silently does nothing on an API not listed in its own applies_to.",
       "applies_to": [
         "atl03x",
         "atl06x",
-        "atl08x"
+        "atl08x",
+        "atl13x",
+        "atl24x"
       ],
       "params": {
         "atl03_ph_fields": {
@@ -604,6 +653,10 @@
           "example_values": [
             "ph_id_channel"
           ],
+          "applies_to": [
+            "atl03x"
+          ],
+          "note": "Only the atl03x endpoint reads ATL03 photon HDF5 groups. On any other X-series API this parameter is silently ignored.",
           "selector": "atl03_ph",
           "selector_url": "/source/schema/icesat2/fields/atl03_ph.json"
         },
@@ -615,6 +668,10 @@
             "ref_azimuth",
             "ref_elev"
           ],
+          "applies_to": [
+            "atl03x"
+          ],
+          "note": "Only the atl03x endpoint reads ATL03 geolocation HDF5 groups. On any other X-series API this parameter is silently ignored.",
           "selector": "atl03_geo",
           "selector_url": "/source/schema/icesat2/fields/atl03_geo.json"
         },
@@ -622,6 +679,10 @@
           "default": [],
           "type": "array<string>",
           "description": "Geophysical correction fields from the ATL03 /geophys_corr subgroup.",
+          "applies_to": [
+            "atl03x"
+          ],
+          "note": "Only the atl03x endpoint reads ATL03 geophys_corr HDF5 groups. On any other X-series API this parameter is silently ignored.",
           "selector": "atl03_corr",
           "selector_url": "/source/schema/icesat2/fields/atl03_corr.json"
         },
@@ -629,6 +690,10 @@
           "default": [],
           "type": "array<string>",
           "description": "Background photon rate fields from the ATL03 /bckgrd_atlas subgroup.",
+          "applies_to": [
+            "atl03x"
+          ],
+          "note": "Only the atl03x endpoint reads ATL03 bckgrd_atlas HDF5 groups. On any other X-series API this parameter is silently ignored.",
           "selector": "atl03_bckgrd",
           "selector_url": "/source/schema/icesat2/fields/atl03_bckgrd.json"
         },
@@ -636,6 +701,10 @@
           "default": [],
           "type": "array<string>",
           "description": "Additional fields from ATL06 land-ice height segments.",
+          "applies_to": [
+            "atl06x"
+          ],
+          "note": "Only the atl06x endpoint reads the ATL06 land_ice_segments HDF5 group. On any other X-series API this parameter is silently ignored.",
           "selector": "atl06",
           "selector_url": "/source/schema/icesat2/fields/atl06.json"
         },
@@ -643,8 +712,12 @@
           "default": [],
           "type": "array<string>",
           "description": "Additional fields from ATL08 land-vegetation segments.",
-          "implicit_behavior": "atl08_fields requires either atl08_class or PhoREAL to already be active \u2014 setting it alone has no effect. It does NOT itself activate the ATL08 classifier; it appends ATL08 land_segments fields to output whose photons are already being classified by one of those other mechanisms.",
-          "note": "For PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead.",
+          "applies_to": [
+            "atl03x",
+            "atl08x"
+          ],
+          "implicit_behavior": "On atl03x, atl08_fields requires either atl08_class or PhoREAL to already be active \u2014 setting it alone has no effect. It does NOT itself activate the ATL08 classifier; it appends ATL08 land_segments fields to output whose photons are already being classified by one of those other mechanisms. On atl08x, this prerequisite does not apply: the endpoint reads the native ATL08 land_segments HDF5 group directly, so atl08_fields appends columns unconditionally.",
+          "note": "On atl03x with PhoREAL extents, per-photon ATL08 values are reduced to per-extent by nearest neighbor (mode). Append '%' to a field name for interpolated (average) reduction instead. On atl08x there is no extent reduction \u2014 fields are appended one-to-one with land_segments rows.",
           "selector": "atl08",
           "selector_url": "/source/schema/icesat2/fields/atl08.json"
         },
@@ -652,6 +725,14 @@
           "default": [],
           "type": "array<string>",
           "description": "Atmospheric fields from ATL09 (cloud cover, atmospheric backscatter).",
+          "applies_to": [
+            "atl03x",
+            "atl06x",
+            "atl08x",
+            "atl13x",
+            "atl24x"
+          ],
+          "note": "Activates the Atl09Sampler runner on every X-series endpoint. ATL09 granules are looked up via CMR per the ATL03 RGT/cycle/region of each request.",
           "selector": "atl09",
           "selector_url": "/source/schema/icesat2/fields/atl09.json"
         },
@@ -659,6 +740,8 @@
           "default": [],
           "type": "array<string>",
           "description": "Additional fields from ATL13 inland water surface segments.",
+          "applies_to": [],
+          "note": "Top-level atl13_fields is consumed only by the legacy Atl13Reader (atl13s/atl13sp endpoints), which are not part of this X-series schema. For atl13x, use the nested atl13.anc_fields parameter under the atl13 algorithm block instead.",
           "selector": "atl13",
           "selector_url": "/source/schema/icesat2/fields/atl13.json"
         }

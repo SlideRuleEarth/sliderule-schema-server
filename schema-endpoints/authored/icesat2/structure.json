@@ -72,9 +72,12 @@
     },
     "algorithms": {
       "label": "Processing Algorithms",
-      "description": "Optional algorithm blocks for atl03x. Each enables a different processing mode that either replaces or appends to the base photon DataFrame. Only include the algorithm(s) you need.",
+      "description": "Optional algorithm / configuration blocks. On atl03x, fit / phoreal / yapc enable processing modes that either replace or append to the base photon DataFrame, and atl24 controls integration with the ATL24 bathymetry product. The phoreal block is also read by atl08x as configuration (no algorithm runs there). The atl24 and atl13 blocks are the canonical configurations for atl24x and atl13x respectively. See per-param applies_to for the cross-API surface — the group's applies_to is the union, not a default.",
       "applies_to": [
-        "atl03x"
+        "atl03x",
+        "atl08x",
+        "atl13x",
+        "atl24x"
       ],
       "params": [
         "fit",
@@ -86,11 +89,13 @@
     },
     "field_selectors": {
       "label": "Ancillary Field Selection",
-      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size.",
+      "description": "Request additional columns from the source HDF5 granules. Field names are HDF5 dataset path suffixes within the relevant subgroup. Adding fields increases processing time and response size. Each selector has its own applies_to — the group's applies_to is the union, not a default. A selector silently does nothing on an API not listed in its own applies_to.",
       "applies_to": [
         "atl03x",
         "atl06x",
-        "atl08x"
+        "atl08x",
+        "atl13x",
+        "atl24x"
       ],
       "params": [
         "atl03_ph_fields",
