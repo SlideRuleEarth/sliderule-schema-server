@@ -1,6 +1,12 @@
 ---
 name: sliderule-schema
 description: Look up SlideRule request parameters, output-column schemas, and HDF5 field selectors from the live schema distribution. Use for questions like "what does the `cnf` parameter do?", "what columns does atl06x return?", "what fields can I request via `atl08_fields`?", "which parameters apply to atl13x?". Fetches machine-readable JSON that definitively describes the server's API surface. Use `sliderule-docsearch` instead for narrative documentation ("how do I...", "what is...") and `nsidc-reference` for ICESat-2/GEDI science theory and ATBDs.
+compatibility: >
+  Requires Python 3.8+, the `requests` package, and network access to
+  schema.testsliderule.org.
+metadata:
+  author: cugarteblair
+  version: "1.0"
 ---
 
 # sliderule-schema
@@ -184,7 +190,7 @@ arguments to this skill's fetcher, not bare HTTP targets.
   `required_pairings`, `implicit_behavior`), and `applies_to` per
   endpoint. All facts about what parameters mean come from here.
 - **`sliderule-api`** points here for any schema question — that skill
-  covers only the Processing API (`POST /arrow/{api}`), never the
+  covers only the Processing API (`POST /source/{api}.arrow`), never the
   Schema API.
 - **`sliderule-analysis`** consults this skill after receiving a
   response to resolve column meanings. The response's `sliderule`
